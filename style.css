@@ -162,11 +162,11 @@ input, select{font-family:inherit;}
   display:flex; flex-direction:column;
 }
 .menu-panel.open{ transform: translateX(0); }
-.menu-user{ display:flex; align-items:center; gap:12px; margin-bottom: 30px; }
+.menu-user{ display:flex; align-items:center; gap:12px; margin-bottom: 30px; padding-top: 20px; }
 .menu-user .av{ width:52px; height:52px; border-radius:50%; background:var(--rojo); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; }
 .menu-user .name{ font-weight:800; font-size:17px; }
 .menu-user .sub{ font-size:12px; color:var(--gris-400); }
-.menu-nav{ display:flex; flex-direction:column; gap:4px; }
+.menu-nav{ display:flex; flex-direction:column; gap:4px; margin-top: 20px; }
 .menu-item{
   display:flex; align-items:center; gap:14px; padding:13px 10px; border-radius:12px; color:var(--gris-200);
   font-weight:700; font-size:15px; cursor:pointer; transition: background .15s;
@@ -257,7 +257,7 @@ input, select{font-family:inherit;}
 .disclaimer{ font-size:11.5px; color:var(--gris-400); line-height:1.5; margin-top:10px; }
 
 /* ---- DATOS PERSONALES / DIAS ---- */
-.avatar-big{ width:76px; height:76px; border-radius:50%; background:var(--negro); color:var(--blanco); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:26px; margin: 0 auto 14px; }
+.avatar-big{ width:76px; height:76px; border-radius:50%; background:var(--negro); color:var(--blanco); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:26px; margin:0 auto 18px; }
 
 /* ---- Toast ---- */
 .toast{
