@@ -1,4 +1,4 @@
-const CACHE_NAME = "facufitness-v1";
+const CACHE_NAME = "facufitness-v2";
 const CACHE_FILES = [
   "./",
   "index.html",
