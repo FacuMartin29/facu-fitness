@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Facu Fitness</title>
+<meta name="theme-color" content="#0d0d0f">
+<meta name="description" content="Tu rutina de gimnasio, día por día.">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon-32.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Facu Fitness">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ===================== SPLASH ===================== -->
+  <div class="screen active" id="screen-splash">
+    <div>
+      <img src="icons/icon-source.png" class="splash-logo" alt="Facu Fitness">
+      <h1 class="splash-title">FACU<span>FITNESS</span></h1>
+      <div class="splash-sub">Tu rutina, tu ritmo</div>
+      <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- ===================== ONBOARDING: NOMBRE ===================== -->
+  <div class="screen" id="screen-onb-name">
+    <div class="onb-wrap">
+      <div class="onb-progress"><i class="done"></i><i></i><i></i></div>
+      <div class="onb-eyebrow">Paso 1 de 3</div>
+      <div class="onb-title">¿Cómo te llamás?</div>
+      <div class="onb-desc">Así vamos a saludarte dentro de la app. Nada de logueo, ni mails, ni contraseñas — solo tu nombre.</div>
+      <div class="field">
+        <label>Nombre</label>
+        <input id="inp-nombre" placeholder="Ej: Facu" autocomplete="off">
+      </div>
+      <div class="spacer"></div>
+      <button class="btn btn-primary" onclick="onbNameNext()">Continuar</button>
+    </div>
+  </div>
+
+  <!-- ===================== ONBOARDING: DATOS ===================== -->
+  <div class="screen" id="screen-onb-datos">
+    <div class="onb-wrap">
+      <div class="onb-progress"><i class="done"></i><i class="done"></i><i></i></div>
+      <div class="onb-eyebrow">Paso 2 de 3</div>
+      <div class="onb-title">Contanos un poco de vos</div>
+      <div class="onb-desc">Con esto calculamos tus métricas y estimamos las calorías de cada rutina.</div>
+      <div class="field"><label>Edad</label><input id="inp-edad" type="number" placeholder="Ej: 28"></div>
+      <div class="field-row">
+        <div class="field"><label>Peso (kg)</label><input id="inp-peso" type="number" step="0.1" placeholder="Ej: 78"></div>
+        <div class="field"><label>Altura (cm)</label><input id="inp-altura" type="number" placeholder="Ej: 178"></div>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn btn-primary" onclick="onbDatosNext()">Continuar</button>
+    </div>
+  </div>
+
+  <!-- ===================== ONBOARDING: DÍAS ===================== -->
+  <div class="screen" id="screen-onb-dias">
+    <div class="onb-wrap">
+      <div class="onb-progress"><i class="done"></i><i class="done"></i><i class="done"></i></div>
+      <div class="onb-eyebrow">Paso 3 de 3</div>
+      <div class="onb-title">¿Qué días vas a entrenar?</div>
+      <div class="onb-desc">Elegí 3 o 4 días por semana. En base a esto armamos tu división de rutina (podés cambiarlo cuando quieras).</div>
+      <div class="daychip-grid" id="onb-day-grid"></div>
+      <div class="hint-box">Elegiste <b><span id="onb-days-count">0</span></b> días. Con 3 días hacemos Pecho+Bíceps / Espalda+Tríceps+Hombro / Piernas. Con 4, sumamos un día extra de Hombro+Core.</div>
+      <div class="spacer"></div>
+      <button class="btn btn-primary" id="btn-onb-finish" onclick="onbFinish()" disabled>Armar mi rutina</button>
+    </div>
+  </div>
+
+  <!-- ===================== APP PRINCIPAL ===================== -->
+  <div class="screen" id="screen-main">
+    <div class="topbar">
+      <button class="burger" id="burger-btn"></button>
+      <div class="topbar-title">FACU<span>FITNESS</span></div>
+      <div class="topbar-avatar" id="topbar-avatar">F</div>
+    </div>
+
+    <div class="content" id="main-content">
+      <div class="tab-content" id="tab-inicio" style="display:block;"></div>
+      <div class="tab-content" id="tab-datos" style="display:none;"></div>
+      <div class="tab-content" id="tab-dias" style="display:none;"></div>
+      <div class="tab-content" id="tab-asistencias" style="display:none;"></div>
+      <div class="tab-content" id="tab-metricas" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ===================== MENÚ LATERAL ===================== -->
+  <div class="menu-overlay" id="menu-overlay"></div>
+  <div class="menu-panel" id="menu-panel">
+    <div class="menu-user">
+      <div class="av" id="menu-user-avatar">F</div>
+      <div>
+        <div class="name" id="menu-user-name">Facu</div>
+        <div class="sub">Facu Fitness</div>
+      </div>
+    </div>
+    <div class="menu-nav" id="menu-nav"></div>
+    <div class="menu-footer">Facu Fitness · hecho con Claudio 🤖<br>Tus datos quedan solo en este teléfono.</div>
+  </div>
+
+  <!-- ===================== MODAL ===================== -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-sheet" id="modal-body"></div>
+  </div>
+
+  <!-- ===================== TOAST ===================== -->
+  <div class="toast" id="toast"></div>
+
+</div>
+
+<script src="exercises.js"></script>
+<script src="app.js"></script>
+<script>
+  // Reemplazo del ícono de hamburguesa (evita depender del orden de carga de app.js)
+  document.getElementById("burger-btn").innerHTML =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="#0d0d0f" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
