@@ -5,7 +5,7 @@
    solo si no hay conexión. Así cada cambio publicado impacta apenas
    entrás, sin tener que reinstalar ni abrir Safari.
    ========================================================= */
-const CACHE_NAME = "facufitness-v5";
+const CACHE_NAME = "facufitness-v6";
 
 // El shell de la app + logo/íconos. Las fotos de ejercicios (images/exercises/*)
 // NO van acá para no hacer pesada la instalación: se cachean solas la primera

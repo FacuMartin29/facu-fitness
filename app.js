@@ -104,9 +104,62 @@ const State = {
   routineTypeLog(){ return Store.get("ff_routineTypeLog", []); },
   saveRoutineTypeLog(arr){ Store.set("ff_routineTypeLog", arr); },
 
+  /* Grupos musculares a priorizar (foco). Suman volumen en sus días. */
+  focus(){ return Store.get("ff_focus", []); },
+  saveFocus(arr){ Store.set("ff_focus", arr); },
+
+  /* Reemplazos de ejercicio por fecha: { "YYYY-MM-DD": { origId: nuevoId } } */
+  swaps(){ return Store.get("ff_swaps", {}); },
+  saveSwaps(obj){ Store.set("ff_swaps", obj); },
+
   weightLog(){ return Store.get("ff_weightLog", []); },
   saveWeightLog(arr){ Store.set("ff_weightLog", arr); },
 };
+
+/* Valores por defecto de objetivo/nivel si el perfil no los tiene aún */
+function getObjetivo(){ const p = State.profile(); return (p && p.objetivo) || "ganar_musculo"; }
+function getNivel(){ const p = State.profile(); return (p && p.nivel) || "intermedio"; }
+
+const OBJETIVOS = {
+  ganar_musculo: { label:"Ganar músculo", emoji:"💪", desc:"Hipertrofia: cargas altas, 8–12 reps, buen descanso." },
+  perder_grasa:  { label:"Perder grasa", emoji:"🔥", desc:"Más reps (12–20), descansos cortos y más cardio." },
+  mantener:      { label:"Mantenerme", emoji:"⚖️", desc:"Equilibrio general de fuerza y acondicionamiento." },
+};
+const NIVELES = {
+  principiante: { label:"Principiante", desc:"Menos series, foco en técnica." },
+  intermedio:   { label:"Intermedio", desc:"Volumen estándar." },
+  avanzado:     { label:"Avanzado", desc:"Más series en ejercicios compuestos." },
+};
+
+/* Rangos de repeticiones objetivo según objetivo + tipo de ejercicio */
+function repsFor(objetivo, tipo){
+  if (tipo === "isométrico" || tipo === "metabolico") return null; // mantienen sus reps/segundos
+  const table = {
+    ganar_musculo: { compuesto:"8-10", aislado:"10-12" },
+    perder_grasa:  { compuesto:"12-15", aislado:"15-20" },
+    mantener:      { compuesto:"8-12", aislado:"12-15" },
+  };
+  return (table[objetivo] || table.ganar_musculo)[tipo] || null;
+}
+
+/* Ajusta series/reps de un ejercicio de fuerza según objetivo y nivel */
+function tuneStrengthExercise(ex, objetivo, nivel){
+  const out = { ...ex };
+  const reps = repsFor(objetivo, ex.tipo);
+  if (reps) out.reps = reps;
+  let sets = ex.sets;
+  if (nivel === "principiante") sets = Math.min(sets, 3);
+  else if (nivel === "avanzado" && ex.tipo === "compuesto") sets = Math.min(sets + 1, 5);
+  out.sets = sets;
+  return out;
+}
+
+/* Factor de duración de cardio según objetivo (perder grasa suma cardio) */
+function cardioFactor(objetivo){
+  if (objetivo === "perder_grasa") return 1.6;
+  if (objetivo === "mantener") return 1.15;
+  return 1; // ganar músculo: cardio corto
+}
 
 /* ---------- TIPO DE RUTINA VIGENTE EN UNA FECHA ----------
    Busca en el historial la última entrada cuyo "from" es <= fecha.
@@ -197,12 +250,32 @@ function generateDayPlan(dateStr){
   if (!dayType || !dayType.key) return { rest: true };
   const type = getRoutineTypeForDate(dateStr);
   const week = isoWeek(parseDate(dateStr));
+  const objetivo = getObjetivo(), nivel = getNivel();
+  const focus = State.focus();
 
   let exercises = [];
   (dayType.grupos || []).forEach((grp, gi) => {
+    // Foco muscular: +1 ejercicio a los grupos priorizados
+    const n = grp.n + (focus.includes(grp.g) ? 1 : 0);
     const seed = week + gi * 3 + dayType.key.charCodeAt(0);
-    const picks = pickExercises(grp.g, grp.n, seed);
+    const picks = pickExercises(grp.g, n, seed);
     picks.forEach(p => exercises.push({ ...p, grupo: grp.g }));
+  });
+
+  // Ajuste por objetivo/nivel (solo fuerza; el circuito/cardio mantiene lo suyo)
+  if (type !== "cardio"){
+    exercises = exercises.map(ex => ex.tipo === "metabolico" ? ex : tuneStrengthExercise(ex, objetivo, nivel));
+  }
+
+  // Reemplazos manuales del usuario para esta fecha
+  const swaps = State.swaps()[dateStr] || {};
+  exercises = exercises.map(ex => {
+    const newId = swaps[ex.id];
+    if (!newId) return ex;
+    const rep = findExerciseById(newId);
+    if (!rep) return ex;
+    const tuned = (type !== "cardio" && rep.tipo !== "metabolico") ? tuneStrengthExercise(rep, objetivo, nivel) : rep;
+    return { ...tuned, grupo: rep.grupo, swappedFrom: ex.id };
   });
 
   let cardio, cardioTitle;
@@ -216,6 +289,10 @@ function generateDayPlan(dateStr){
   } else {
     cardio = pickCardio(dateStr);
     cardioTitle = "Calentamiento";
+  }
+  // Objetivo: escalar duración del bloque de cardio (perder grasa suma)
+  if (cardio){
+    cardio = { ...cardio, durMin: Math.round(cardio.durMin * cardioFactor(objetivo)) };
   }
 
   return { rest: false, routineType: type, dayType, cardio, cardioTitle, exercises };
@@ -382,7 +459,32 @@ function goTo(tabId){
   $$(".tab-content").forEach(el => el.style.display = "none");
   const active = $("#tab-" + tabId);
   if (active) active.style.display = "block";
+  updateBottomNav();
   window.scrollTo(0,0);
+}
+
+/* ---------- BARRA DE NAVEGACIÓN INFERIOR ---------- */
+const BOTTOM_NAV = [
+  { id: "inicio", label: "Inicio", icon: "home" },
+  { id: "asistencias", label: "Calendario", icon: "calendar" },
+  { id: "metricas", label: "Métricas", icon: "chart" },
+  { id: "__menu", label: "Menú", icon: "menu" },
+];
+function buildBottomNav(){
+  const nav = $("#bottomnav");
+  if (!nav) return;
+  nav.innerHTML = "";
+  BOTTOM_NAV.forEach(item => {
+    const el = document.createElement("button");
+    el.className = "bn-item" + (item.id === currentTab ? " active" : "");
+    el.dataset.tab = item.id;
+    el.innerHTML = `${svgIcon(item.icon)}<span>${item.label}</span>`;
+    el.onclick = () => item.id === "__menu" ? openMenu() : goTo(item.id);
+    nav.appendChild(el);
+  });
+}
+function updateBottomNav(){
+  $$(".bn-item").forEach(el => el.classList.toggle("active", el.dataset.tab === currentTab));
 }
 
 function buildMenu(){
@@ -400,6 +502,7 @@ function buildMenu(){
     el.onclick = () => goTo(item.id);
     nav.appendChild(el);
   });
+  buildBottomNav();
 }
 
 /* =========================================================
@@ -472,11 +575,11 @@ function renderHome(){
     html += `<div class="card"><div class="section-title" style="margin-top:0;">${tituloEj}</div>`;
     plan.exercises.forEach((ex, i) => {
       html += `
-        <div class="exercise-row" onclick="openExerciseDetail('${ex.id}')">
+        <div class="exercise-row" onclick="openExerciseDetail('${ex.id}','${today}','','${ex.swappedFrom||ex.id}')">
           <div class="exercise-left">
             ${exerciseThumb(ex)}
             <div>
-              <div class="exercise-name">${ex.name}</div>
+              <div class="exercise-name">${ex.name}${ex.swappedFrom ? ' <span class="swap-mark">🔁</span>' : ''}</div>
               <div class="exercise-equip">${ex.equip}</div>
             </div>
           </div>
@@ -569,9 +672,9 @@ function openDayPreview(dateStr){
     }
     plan.exercises.forEach((ex, i) => {
       body += `
-        <div class="exercise-row" onclick="openExerciseDetail('${ex.id}','${dateStr}')">
+        <div class="exercise-row" onclick="openExerciseDetail('${ex.id}','${dateStr}','day','${ex.swappedFrom||ex.id}')">
           <div class="exercise-left">${exerciseThumb({...ex})}
-            <div><div class="exercise-name">${ex.name}</div><div class="exercise-equip">${ex.equip}</div></div></div>
+            <div><div class="exercise-name">${ex.name}${ex.swappedFrom ? ' <span class="swap-mark">🔁</span>' : ''}</div><div class="exercise-equip">${ex.equip}</div></div></div>
           <div class="exercise-sr">${ex.reps}x${ex.sets}</div>
         </div>`;
     });
@@ -598,7 +701,14 @@ function markAttendance(fui){
   const plan = generateDayPlan(today);
   const attendance = State.attendance();
   if (fui){
-    attendance[today] = { status: "asistio", dayKey: plan.dayType.key };
+    const profile = State.profile();
+    // Congelamos las kcal de esta sesión: aunque después cambies objetivo,
+    // foco o tipo de rutina, tu historial de métricas no se mueve.
+    attendance[today] = {
+      status: "asistio",
+      dayKey: plan.dayType.key,
+      kcal: estimateSessionKcal(plan, profile.peso),
+    };
     State.saveAttendance(attendance);
     toast("¡Registrado! Sumaste una sesión más 🔥");
     renderHome();
@@ -664,9 +774,13 @@ function musclesHtml(media){
   return p + s;
 }
 
-function openExerciseDetail(id, backDate){
+function openExerciseDetail(id, date, back, slotId){
   const ex = findExerciseById(id);
   if (!ex) return;
+  date = date || todayStr();
+  slotId = slotId || id;
+  const backDate = back === "day" ? date : null;
+  const canSwap = date >= todayStr(); // solo hoy o a futuro
   const archetype = EXERCISE_IMAGE[id] || "";
   const cue = EXERCISE_CUE[archetype] || "Mantené la técnica controlada en todo el recorrido y respirá de forma pareja.";
   const media = (typeof EXERCISE_MEDIA !== "undefined") && EXERCISE_MEDIA[id];
@@ -694,12 +808,52 @@ function openExerciseDetail(id, backDate){
       <span class="exercise-sr" style="background:var(--gris-100); color:var(--gris-800);">${ex.equip}</span>
       <span class="exercise-sr">${ex.reps} reps x ${ex.sets} series</span>
     </div>
-    <div class="modal-desc" style="margin-bottom:4px;">${cue}</div>
+    <div class="modal-desc" style="margin-bottom:12px;">${cue}</div>
+    ${canSwap ? `<button class="btn btn-outline" style="margin-bottom:10px;" onclick="openSwapPicker('${slotId}','${ex.grupo}','${date}','${back||""}')">🔁 Cambiar por otro ejercicio</button>` : ""}
     ${backDate
-      ? `<button class="btn btn-outline" onclick="openDayPreview('${backDate}')">‹ Volver a la rutina</button>`
-      : `<button class="btn btn-outline" onclick="closeModal()">Cerrar</button>`}
+      ? `<button class="btn btn-ghost" onclick="openDayPreview('${backDate}')">‹ Volver a la rutina</button>`
+      : `<button class="btn btn-ghost" onclick="closeModal()">Cerrar</button>`}
   `;
   $("#modal-overlay").classList.add("open");
+}
+
+/* Picker para reemplazar un ejercicio por otro del mismo grupo muscular */
+function openSwapPicker(slotId, grupo, date, back){
+  const pool = (EXERCISE_DB[grupo] || []);
+  const swaps = State.swaps();
+  const activo = (swaps[date] || {})[slotId];
+  const rows = pool.map(e => {
+    const sel = (e.id === activo) || (!activo && e.id === slotId);
+    return `
+      <div class="exercise-row" onclick="applySwap('${slotId}','${e.id}','${grupo}','${date}','${back}')">
+        <div class="exercise-left">${exerciseThumb({...e, grupo})}
+          <div><div class="exercise-name">${e.name}</div><div class="exercise-equip">${e.equip}</div></div></div>
+        <div class="exercise-sr" style="${sel ? "" : "background:var(--gris-100);color:var(--gris-600);"}">${sel ? "Actual" : "Elegir"}</div>
+      </div>`;
+  }).join("");
+  $("#modal-body").innerHTML = `
+    <div class="modal-title">Elegí el ejercicio</div>
+    <div class="modal-desc">Reemplazá por otro del mismo grupo. Aplica solo para ese día.</div>
+    ${activo ? `<button class="btn btn-outline" style="margin-bottom:12px;" onclick="applySwap('${slotId}','${slotId}','${grupo}','${date}','${back}')">↩︎ Volver al ejercicio original</button>` : ""}
+    <div style="max-height:52vh; overflow-y:auto; margin-bottom:8px;">${rows}</div>
+    <button class="btn btn-ghost" onclick="openExerciseDetail('${activo||slotId}','${date}','${back}','${slotId}')">Cancelar</button>
+  `;
+  $("#modal-overlay").classList.add("open");
+}
+
+function applySwap(slotId, newId, grupo, date, back){
+  const swaps = State.swaps();
+  swaps[date] = swaps[date] || {};
+  if (newId === slotId) delete swaps[date][slotId]; // volver al original
+  else swaps[date][slotId] = newId;
+  if (Object.keys(swaps[date]).length === 0) delete swaps[date];
+  State.saveSwaps(swaps);
+  toast("Ejercicio actualizado 🔁");
+  // refrescar la vista de origen
+  if (date === todayStr()) renderHome();
+  // reabrir el detalle del ejercicio (nuevo o el que quedó)
+  const shownId = newId;
+  openExerciseDetail(shownId, date, back, slotId);
 }
 
 /* =========================================================
@@ -720,13 +874,95 @@ function renderDatos(){
       <div class="field"><label>Altura (cm)</label><input id="d-altura" type="number" value="${p.altura||""}"></div>
       <button class="btn btn-primary" onclick="saveDatos()">Guardar cambios</button>
     </div>
+
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Objetivo y nivel</div>
+      <p style="font-size:13px; color:var(--gris-600); margin:0 0 12px;">Ajustamos las series, repeticiones y el cardio de tu rutina según esto.</p>
+      <div class="field">
+        <label>Mi objetivo</label>
+        <select id="d-objetivo">
+          ${Object.keys(OBJETIVOS).map(k=>`<option value="${k}" ${getObjetivo()===k?"selected":""}>${OBJETIVOS[k].emoji} ${OBJETIVOS[k].label}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field">
+        <label>Mi nivel</label>
+        <select id="d-nivel">
+          ${Object.keys(NIVELES).map(k=>`<option value="${k}" ${getNivel()===k?"selected":""}>${NIVELES[k].label}</option>`).join("")}
+        </select>
+      </div>
+      <div class="hint-box" id="d-obj-hint">${OBJETIVOS[getObjetivo()].desc}</div>
+      <button class="btn btn-primary" style="margin-top:14px;" onclick="saveObjetivoNivel()">Guardar objetivo y nivel</button>
+    </div>
+
     <div class="card">
       <div class="section-title" style="margin-top:0;">Registrar peso de hoy</div>
       <p style="font-size:13px; color:var(--gris-600); margin-top:0;">Esto alimenta el gráfico de evolución en Métricas.</p>
       <div class="field"><input id="d-peso-log" type="number" step="0.1" placeholder="Ej: 78.5"></div>
       <button class="btn btn-outline" onclick="logWeight()">Guardar registro</button>
     </div>
+
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Copia de seguridad</div>
+      <p style="font-size:13px; color:var(--gris-600); margin:0 0 12px; line-height:1.5;">
+        Tus datos viven <b>solo en este teléfono</b>. Si borrás los datos del sitio en Safari, se pierden.
+        Guardá un respaldo cada tanto y así podés restaurarlo o pasarlo a otro dispositivo.
+      </p>
+      <button class="btn btn-outline" onclick="exportData()">⤓ Exportar respaldo</button>
+      <input type="file" id="d-import-file" accept="application/json,.json" style="display:none" onchange="importDataFile(this)">
+      <button class="btn btn-ghost" style="margin-top:8px;" onclick="document.getElementById('d-import-file').click()">⤒ Importar respaldo</button>
+    </div>
   `;
+  const sel = $("#d-objetivo");
+  if (sel) sel.onchange = () => { $("#d-obj-hint").textContent = OBJETIVOS[sel.value].desc; };
+}
+
+function saveObjetivoNivel(){
+  const p = State.profile();
+  p.objetivo = $("#d-objetivo").value;
+  p.nivel = $("#d-nivel").value;
+  State.saveProfile(p);
+  toast("Objetivo y nivel guardados 🎯");
+}
+
+/* ---------- BACKUP: exportar / importar ---------- */
+const BACKUP_KEYS = ["ff_profile","ff_trainingDays","ff_attendance","ff_makeups","ff_routineTypeLog","ff_focus","ff_swaps","ff_weightLog"];
+function exportData(){
+  const data = { app:"facu-fitness", version:1, exportedAt:new Date().toISOString(), data:{} };
+  BACKUP_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v != null) data.data[k] = v; });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `facu-fitness-backup-${todayStr()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  toast("Respaldo descargado ⤓");
+}
+function importDataFile(input){
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      const payload = parsed && parsed.data ? parsed.data : parsed;
+      if (!payload || typeof payload !== "object") throw new Error("formato");
+      let count = 0;
+      BACKUP_KEYS.forEach(k => {
+        if (payload[k] != null){
+          const val = typeof payload[k] === "string" ? payload[k] : JSON.stringify(payload[k]);
+          localStorage.setItem(k, val); count++;
+        }
+      });
+      if (!count) throw new Error("vacío");
+      toast("Respaldo importado ✅ Recargando…");
+      setTimeout(()=>location.reload(), 900);
+    } catch(e){
+      toast("No pude leer ese archivo de respaldo 😕");
+    }
+  };
+  reader.readAsText(file);
+  input.value = "";
 }
 
 function saveDatos(){
@@ -789,9 +1025,48 @@ function renderTipo(){
       </div>
       <button class="btn btn-primary" onclick="saveTipo()">Guardar tipo de rutina</button>
     </div>
+
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Foco muscular <span style="font-weight:600;color:var(--gris-400);text-transform:none;letter-spacing:0;">(opcional)</span></div>
+      <p style="font-size:13px; color:var(--gris-600); margin:0 0 12px; line-height:1.5;">
+        Elegí los grupos que querés priorizar y les sumamos un ejercicio extra los días que se entrenan.
+        Aplica a las rutinas de fuerza (Musculación y Mix).
+      </p>
+      <div class="daychip-grid" id="focus-grid" style="grid-template-columns:repeat(3,1fr);"></div>
+      <button class="btn btn-primary" style="margin-top:14px;" onclick="saveFocus()">Guardar foco</button>
+    </div>
+
     <div class="card" id="tipo-preview"></div>
   `;
+  renderFocusChips();
   updateTipoUI();
+}
+
+const FOCUS_GRUPOS = [
+  { g:"pecho", label:"Pecho" }, { g:"espalda", label:"Espalda" }, { g:"hombros", label:"Hombros" },
+  { g:"biceps", label:"Bíceps" }, { g:"triceps", label:"Tríceps" }, { g:"piernas", label:"Piernas" },
+  { g:"core", label:"Core" },
+];
+let focusSel = [];
+function renderFocusChips(){
+  focusSel = State.focus().slice();
+  const grid = $("#focus-grid");
+  grid.innerHTML = "";
+  FOCUS_GRUPOS.forEach(item => {
+    const chip = document.createElement("div");
+    chip.className = "daychip" + (focusSel.includes(item.g) ? " selected" : "");
+    chip.textContent = item.label;
+    chip.onclick = () => {
+      const i = focusSel.indexOf(item.g);
+      if (i === -1) focusSel.push(item.g); else focusSel.splice(i,1);
+      chip.classList.toggle("selected");
+    };
+    grid.appendChild(chip);
+  });
+}
+function saveFocus(){
+  State.saveFocus(focusSel);
+  toast(focusSel.length ? "Foco muscular guardado 🎯" : "Foco muscular quitado");
 }
 
 function selectTipo(key){
@@ -957,9 +1232,9 @@ function openDayDetail(dateStr){
         <div><div style="font-weight:700; font-size:13.5px;">${plan.cardioTitle}: ${plan.cardio.name}</div>
         <div style="font-size:11.5px; color:var(--gris-600);">${plan.cardio.durMin} min</div></div></div>` : ""}
       ${plan.exercises.map((ex,i)=>`
-        <div class="exercise-row" onclick="openExerciseDetail('${ex.id}')">
+        <div class="exercise-row" onclick="openExerciseDetail('${ex.id}','${dateStr}','','${ex.swappedFrom||ex.id}')">
           <div class="exercise-left">${exerciseThumb(ex)}
-            <div><div class="exercise-name">${ex.name}</div><div class="exercise-equip">${ex.equip}</div></div></div>
+            <div><div class="exercise-name">${ex.name}${ex.swappedFrom ? ' <span class="swap-mark">🔁</span>' : ''}</div><div class="exercise-equip">${ex.equip}</div></div></div>
           <div class="exercise-sr">${ex.reps}x${ex.sets}</div>
         </div>`).join("")}
       <div class="hint-box" style="margin-top:12px;">Estado: <b>${statusTxt}</b></div>
@@ -977,9 +1252,11 @@ function computeMetrics(){
   const totalSesiones = entries.length;
 
   let totalKcal = 0;
-  entries.forEach(([date]) => {
-    const plan = generateDayPlan(date);
-    totalKcal += estimateSessionKcal(plan, profile.peso);
+  entries.forEach(([date, a]) => {
+    // Usa las kcal congeladas al momento de asistir; si es un registro viejo
+    // sin ese dato, las recalcula como fallback.
+    if (typeof a.kcal === "number") totalKcal += a.kcal;
+    else totalKcal += estimateSessionKcal(generateDayPlan(date), profile.peso);
   });
 
   const kgEstimados = totalKcal / 7700;
