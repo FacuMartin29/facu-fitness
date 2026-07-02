@@ -569,7 +569,7 @@ function openDayPreview(dateStr){
     }
     plan.exercises.forEach((ex, i) => {
       body += `
-        <div class="exercise-row">
+        <div class="exercise-row" onclick="openExerciseDetail('${ex.id}','${dateStr}')">
           <div class="exercise-left">${exerciseThumb({...ex})}
             <div><div class="exercise-name">${ex.name}</div><div class="exercise-equip">${ex.equip}</div></div></div>
           <div class="exercise-sr">${ex.reps}x${ex.sets}</div>
@@ -664,7 +664,7 @@ function musclesHtml(media){
   return p + s;
 }
 
-function openExerciseDetail(id){
+function openExerciseDetail(id, backDate){
   const ex = findExerciseById(id);
   if (!ex) return;
   const archetype = EXERCISE_IMAGE[id] || "";
@@ -695,7 +695,9 @@ function openExerciseDetail(id){
       <span class="exercise-sr">${ex.reps} reps x ${ex.sets} series</span>
     </div>
     <div class="modal-desc" style="margin-bottom:4px;">${cue}</div>
-    <button class="btn btn-outline" onclick="closeModal()">Cerrar</button>
+    ${backDate
+      ? `<button class="btn btn-outline" onclick="openDayPreview('${backDate}')">‹ Volver a la rutina</button>`
+      : `<button class="btn btn-outline" onclick="closeModal()">Cerrar</button>`}
   `;
   $("#modal-overlay").classList.add("open");
 }
