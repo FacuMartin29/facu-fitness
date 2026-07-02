@@ -101,22 +101,40 @@ function equipIconKey(equip){
   return "peso_corporal";
 }
 
-/* SVG chico para thumbnail en la lista de ejercicios */
-function exerciseThumb(ex){
+/* SVG de equipamiento (fallback cuando no hay foto) */
+function equipSvg(ex, cls){
   const grupo = ex.grupo || "pecho";
   const color = GRUPO_COLOR[grupo] || "#e03131";
   const key = ex.tipo === "metabolico" ? "correr" : equipIconKey(ex.equip);
-  return `<svg class="ex-thumb" viewBox="0 0 100 72" style="color:${color}" fill="none"
+  return `<svg class="${cls}" viewBox="0 0 100 72" style="color:${color}" fill="none"
      stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${EQUIP_ICON[key]||EQUIP_ICON.peso_corporal}</svg>`;
 }
 
-/* SVG grande para el detalle del ejercicio */
+/* Miniatura para la lista: usa la foto demostrativa real si existe,
+   con fallback automático al ícono de equipamiento si la imagen falla. */
+function exerciseThumb(ex){
+  const m = (typeof EXERCISE_MEDIA !== "undefined") && EXERCISE_MEDIA[ex.id];
+  if (m && m.img && m.img[0]){
+    const fb = encodeURIComponent(equipSvg(ex, "ex-thumb"));
+    return `<img class="ex-thumb-img" src="${m.img[0]}" alt="" loading="lazy" data-fb="${fb}" onerror="ffImgFail(this)">`;
+  }
+  return equipSvg(ex, "ex-thumb");
+}
+
+/* SVG grande para el detalle del ejercicio (fallback cuando no hay foto) */
 function exerciseArt(ex){
-  const grupo = ex.grupo || "pecho";
-  const color = GRUPO_COLOR[grupo] || "#e03131";
-  const key = ex.tipo === "metabolico" ? "correr" : equipIconKey(ex.equip);
-  return `<svg class="ex-art" viewBox="0 0 100 72" style="color:${color}" fill="none"
-     stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${EQUIP_ICON[key]||EQUIP_ICON.peso_corporal}</svg>`;
+  return equipSvg(ex, "ex-art");
+}
+
+/* Si una imagen no carga, la reemplaza por el ícono SVG guardado en data-fb */
+if (typeof window !== "undefined"){
+  window.ffImgFail = function(img){
+    try {
+      const fb = decodeURIComponent(img.getAttribute("data-fb") || "");
+      if (fb) img.insertAdjacentHTML("afterend", fb);
+    } catch(e){}
+    img.remove();
+  };
 }
 
 /* Logo de la app (emblema con mancuerna + 29) */

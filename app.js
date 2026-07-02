@@ -650,15 +650,47 @@ function findExerciseById(id){
   return null;
 }
 
+/* Traducción de músculos (free-exercise-db usa nombres en inglés) */
+const MUSCULO_ES = {
+  chest:"Pecho", shoulders:"Hombros", triceps:"Tríceps", biceps:"Bíceps",
+  lats:"Dorsales", "middle back":"Espalda media", "lower back":"Zona lumbar",
+  traps:"Trapecios", forearms:"Antebrazos", quadriceps:"Cuádriceps",
+  hamstrings:"Isquiotibiales", glutes:"Glúteos", calves:"Gemelos",
+  abdominals:"Abdominales", adductors:"Aductores", abductors:"Abductores", neck:"Cuello",
+};
+function musclesHtml(media){
+  const p = (media.primary||[]).map(m=>`<span class="musc-tag primary">${MUSCULO_ES[m]||m}</span>`).join("");
+  const s = (media.secondary||[]).map(m=>`<span class="musc-tag">${MUSCULO_ES[m]||m}</span>`).join("");
+  return p + s;
+}
+
 function openExerciseDetail(id){
   const ex = findExerciseById(id);
   if (!ex) return;
   const archetype = EXERCISE_IMAGE[id] || "";
   const cue = EXERCISE_CUE[archetype] || "Mantené la técnica controlada en todo el recorrido y respirá de forma pareja.";
+  const media = (typeof EXERCISE_MEDIA !== "undefined") && EXERCISE_MEDIA[id];
+
+  let visual, muscles;
+  if (media && media.img && media.img.length){
+    const labels = ["Inicio","Fin"];
+    const imgs = media.img.map((src,i)=>`
+      <figure class="ex-photo">
+        <img src="${src}" alt="${ex.name}" loading="lazy" onerror="this.closest('.ex-photo').style.display='none'">
+        <figcaption>${labels[i]||""}</figcaption>
+      </figure>`).join("");
+    visual = `<div class="ex-photo-box">${imgs}</div>`;
+    muscles = `<div class="musc-row"><span class="musc-label">Músculos:</span> ${musclesHtml(media)}</div>`;
+  } else {
+    visual = `<div class="ex-art-box">${exerciseArt(ex)}</div>`;
+    muscles = "";
+  }
+
   $("#modal-body").innerHTML = `
-    <div class="ex-art-box">${exerciseArt(ex)}</div>
+    ${visual}
     <div class="modal-title">${ex.name}</div>
-    <div style="display:flex; gap:8px; margin:6px 0 12px;">
+    ${muscles}
+    <div style="display:flex; gap:8px; margin:8px 0 12px; flex-wrap:wrap;">
       <span class="exercise-sr" style="background:var(--gris-100); color:var(--gris-800);">${ex.equip}</span>
       <span class="exercise-sr">${ex.reps} reps x ${ex.sets} series</span>
     </div>

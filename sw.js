@@ -5,10 +5,11 @@
    solo si no hay conexión. Así cada cambio publicado impacta apenas
    entrás, sin tener que reinstalar ni abrir Safari.
    ========================================================= */
-const CACHE_NAME = "facufitness-v4";
+const CACHE_NAME = "facufitness-v5";
 
-// El arte de los ejercicios es SVG inline (art.js). Los PNG del logo y
-// los íconos sí son archivos y los cacheamos para que carguen offline.
+// El shell de la app + logo/íconos. Las fotos de ejercicios (images/exercises/*)
+// NO van acá para no hacer pesada la instalación: se cachean solas la primera
+// vez que se ven (estrategia network-first de abajo) y quedan disponibles offline.
 const CORE_FILES = [
   "./",
   "index.html",
@@ -16,6 +17,7 @@ const CORE_FILES = [
   "art.js",
   "app.js",
   "exercises.js",
+  "exercise-media.js",
   "manifest.json",
   "icons/splash-logo.png",
   "icons/icon-180.png",
