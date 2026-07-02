@@ -24,6 +24,42 @@ const SPLITS = {
   ],
 };
 
+/* ---------- SPLITS PARA TIPO "CARDIO" ----------
+   Días orientados al acondicionamiento cardiovascular. Cada día
+   define un "mode" (bloque cardio principal) y grupos accesorios
+   (core o circuito metabólico). */
+const CARDIO_SPLIT = {
+  3: [
+    { key: "H", label: "HIIT + Core", corto: "HIIT / Core", mode: "hiit",
+      grupos: [{ g: "core", n: 2 }] },
+    { key: "L", label: "Cardio continuo (LISS)", corto: "Cardio continuo", mode: "liss",
+      grupos: [] },
+    { key: "M", label: "Circuito metabólico", corto: "Circuito", mode: "circuit",
+      grupos: [{ g: "cardio_circuit", n: 5 }] },
+  ],
+  4: [
+    { key: "H", label: "HIIT + Core", corto: "HIIT / Core", mode: "hiit",
+      grupos: [{ g: "core", n: 2 }] },
+    { key: "L", label: "Cardio continuo (LISS)", corto: "Cardio continuo", mode: "liss",
+      grupos: [] },
+    { key: "M", label: "Circuito metabólico", corto: "Circuito", mode: "circuit",
+      grupos: [{ g: "cardio_circuit", n: 5 }] },
+    { key: "T", label: "Tempo + Core", corto: "Tempo / Core", mode: "tempo",
+      grupos: [{ g: "core", n: 2 }] },
+  ],
+};
+
+/* Metadatos de cada tipo de rutina (para el selector del menú) */
+const ROUTINE_TYPES = {
+  musculacion: { label: "Pro Musculación", emoji: "🏋️",
+    desc: "Enfoque en hipertrofia y fuerza. División por grupos musculares, 3–4 series de 8–15 reps y un cardio corto de entrada en calor." },
+  cardio: { label: "Pro Cardio", emoji: "🏃",
+    desc: "Enfoque cardiovascular. Días de HIIT, cardio continuo (LISS), tempo y circuitos metabólicos para quemar y mejorar el fondo en pista." },
+  mix: { label: "Mix Cardio · Musculación", emoji: "⚡",
+    desc: "Lo mejor de los dos mundos: entrenás fuerza por grupos musculares y sumás un bloque de cardio moderado en cada sesión." },
+};
+const DEFAULT_ROUTINE_TYPE = "musculacion";
+
 const DIAS_NOMBRE = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 const DIAS_CORTO  = ["D","L","M","X","J","V","S"];
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
@@ -62,26 +98,53 @@ const State = {
   makeups(){ return Store.get("ff_makeups", {}); },
   saveMakeups(obj){ Store.set("ff_makeups", obj); },
 
+  /* Historial de tipo de rutina: [{from:"YYYY-MM-DD", type:"musculacion|cardio|mix"}].
+     Cada cambio aplica "de esa fecha en adelante", así los días ya asistidos
+     conservan el tipo que estaba vigente y sus métricas no se mueven. */
+  routineTypeLog(){ return Store.get("ff_routineTypeLog", []); },
+  saveRoutineTypeLog(arr){ Store.set("ff_routineTypeLog", arr); },
+
   weightLog(){ return Store.get("ff_weightLog", []); },
   saveWeightLog(arr){ Store.set("ff_weightLog", arr); },
 };
 
-/* ---------- SPLIT ACTIVO SEGÚN CANTIDAD DE DÍAS ---------- */
+/* ---------- TIPO DE RUTINA VIGENTE EN UNA FECHA ----------
+   Busca en el historial la última entrada cuyo "from" es <= fecha.
+   Si no hay historial, usa el tipo por defecto (musculación),
+   preservando el comportamiento y las métricas previas. */
+function getRoutineTypeForDate(dateStr){
+  const log = State.routineTypeLog().slice().sort((a,b)=>a.from.localeCompare(b.from));
+  let type = DEFAULT_ROUTINE_TYPE;
+  for (const e of log){ if (e.from <= dateStr) type = e.type; }
+  return type;
+}
+function currentRoutineType(){ return getRoutineTypeForDate(todayStr()); }
+
+/* Devuelve la lista de días (split) según tipo y cantidad de días entrenados */
+function getSplitFor(type, nDays){
+  const key = nDays <= 3 ? 3 : 4;
+  if (type === "cardio") return CARDIO_SPLIT[key];
+  return SPLITS[key]; // musculación y mix comparten división de fuerza
+}
+
+/* Split activo hoy (según cantidad de días entrenados y tipo vigente) */
 function getActiveSplit(){
   const days = State.trainingDays();
-  const n = days.length;
-  if (n <= 3) return SPLITS[3];
-  return SPLITS[4];
+  return getSplitFor(currentRoutineType(), days.length);
+}
+
+/* Busca una entrada de split por su key en TODOS los tipos (para reposiciones) */
+function findSplitEntryByKey(key){
+  const all = SPLITS[3].concat(SPLITS[4], CARDIO_SPLIT[3], CARDIO_SPLIT[4]);
+  return all.find(s => s.key === key) || null;
 }
 
 /* Devuelve el tipo de día (objeto split) para una fecha dada, o null si es descanso */
 function getDayTypeForDate(dateStr){
   const makeups = State.makeups();
   if (makeups[dateStr]) {
-    const split = getActiveSplit();
-    const found = split.find(s => s.key === makeups[dateStr].dayKey) ||
-                  SPLITS[3].concat(SPLITS[4]).find(s => s.key === makeups[dateStr].dayKey);
-    return { ...found, repuesto: true, origen: makeups[dateStr].origen };
+    const found = findSplitEntryByKey(makeups[dateStr].dayKey);
+    return { ...(found||{}), repuesto: true, origen: makeups[dateStr].origen };
   }
   const days = State.trainingDays();
   if (!days.length) return null;
@@ -89,7 +152,8 @@ function getDayTypeForDate(dateStr){
   const weekday = date.getDay();
   const idx = days.indexOf(weekday);
   if (idx === -1) return null;
-  const split = getActiveSplit();
+  const type = getRoutineTypeForDate(dateStr);
+  const split = getSplitFor(type, days.length);
   if (idx >= split.length) return null;
   return { ...split[idx], repuesto: false };
 }
@@ -120,18 +184,41 @@ function pickCardio(dateStr){
   return EXERCISE_DB.cardio[w % EXERCISE_DB.cardio.length];
 }
 
-/* Genera el plan completo del día: {rest:true} o {dayType, cardio, exercises:[...]} */
+/* Elige el bloque cardiovascular principal según el modo del día */
+function pickCardioBlock(mode, seed){
+  const list = CARDIO_MODES[mode] || CARDIO_MODES.warmup;
+  return list[Math.abs(seed) % list.length];
+}
+
+/* Genera el plan completo del día.
+   Devuelve {rest:true} o {routineType, dayType, cardio, cardioTitle, exercises:[...]} */
 function generateDayPlan(dateStr){
   const dayType = getDayTypeForDate(dateStr);
-  if (!dayType) return { rest: true };
+  if (!dayType || !dayType.key) return { rest: true };
+  const type = getRoutineTypeForDate(dateStr);
   const week = isoWeek(parseDate(dateStr));
+
   let exercises = [];
-  dayType.grupos.forEach((grp, gi) => {
+  (dayType.grupos || []).forEach((grp, gi) => {
     const seed = week + gi * 3 + dayType.key.charCodeAt(0);
     const picks = pickExercises(grp.g, grp.n, seed);
     picks.forEach(p => exercises.push({ ...p, grupo: grp.g }));
   });
-  return { rest: false, dayType, cardio: pickCardio(dateStr), exercises };
+
+  let cardio, cardioTitle;
+  if (type === "cardio"){
+    const mode = dayType.mode === "circuit" ? null : dayType.mode;
+    cardio = mode ? pickCardioBlock(mode, week + dayType.key.charCodeAt(0)) : null;
+    cardioTitle = "Bloque cardiovascular";
+  } else if (type === "mix"){
+    cardio = pickCardioBlock("mix", week + dayType.key.charCodeAt(0));
+    cardioTitle = "Bloque de cardio";
+  } else {
+    cardio = pickCardio(dateStr);
+    cardioTitle = "Calentamiento";
+  }
+
+  return { rest: false, routineType: type, dayType, cardio, cardioTitle, exercises };
 }
 
 /* ---------- CÁLCULO DE CALORÍAS ESTIMADAS ---------- */
@@ -179,14 +266,16 @@ const onb = { nombre:"", apellido:"", edad:"", peso:"", altura:"", dias:[] };
 
 function initApp(){
   const profile = State.profile();
+  const splash = $("#screen-splash");
+  const goNext = () => {
+    if (profile && profile.onboardDone) { renderHome(); showScreen("#screen-main"); }
+    else { showScreen("#screen-onb-name"); }
+  };
+  // El anillo se llena en 3s (CSS). Al terminar, el logo se expande y luego pasamos.
   setTimeout(() => {
-    if (profile && profile.onboardDone) {
-      renderHome();
-      showScreen("#screen-main");
-    } else {
-      showScreen("#screen-onb-name");
-    }
-  }, 1200);
+    splash.classList.add("zoom");
+    setTimeout(goNext, 620);   // espera a que termine la animación de expansión
+  }, 3000);
 }
 
 /* ---------- ONBOARDING: PASO NOMBRE ---------- */
@@ -250,6 +339,7 @@ function onbFinish(){
    ========================================================= */
 const MENU_ITEMS = [
   { id: "inicio", label: "Inicio", icon: "home" },
+  { id: "tipo", label: "Tipo de rutina", icon: "dumbbell" },
   { id: "datos", label: "Datos personales", icon: "user" },
   { id: "dias", label: "Días de rutina", icon: "calendar" },
   { id: "asistencias", label: "Asistencias", icon: "check" },
@@ -262,6 +352,7 @@ const ICONS = {
   calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
   check: '<path d="M4 12l6 6L20 6"/>',
   chart: '<path d="M4 20V10M12 20V4M20 20v-7"/>',
+  dumbbell: '<path d="M6.5 6.5l11 11"/><path d="M3 8l2-2 3 3-2 2z"/><path d="M16 19l2-2 3-3-2-2-3 3z" transform="translate(-1,-1)"/><path d="M2 12l2 2M20 10l2 2"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
 };
 function svgIcon(name, extra=""){
@@ -283,6 +374,7 @@ function goTo(tabId){
   closeMenu();
   $$(".menu-item").forEach(el => el.classList.toggle("active", el.dataset.tab === tabId));
   if (tabId === "inicio") renderHome();
+  if (tabId === "tipo") renderTipo();
   if (tabId === "datos") renderDatos();
   if (tabId === "dias") renderDias();
   if (tabId === "asistencias") renderAsistencias();
@@ -340,6 +432,7 @@ function renderHome(){
           o cambiar los días que entrenás esta semana, ${profile.nombre}.
         </p>
       </div>`;
+    html += buildUpcomingCard();
     c.innerHTML = html;
     return;
   }
@@ -363,30 +456,44 @@ function renderHome(){
       </div>
     </div>`;
 
-  html += `
-    <div class="cardio-chip">
-      <span class="dot"></span>
-      <div>
-        <div style="font-weight:700; font-size:13.5px;">Calentamiento: ${plan.cardio.name}</div>
-        <div style="font-size:11.5px; color:var(--gris-600);">${plan.cardio.durMin} minutos, ritmo moderado</div>
-      </div>
-    </div>`;
-
-  html += `<div class="card"><div class="section-title" style="margin-top:0;">Ejercicios de hoy</div>`;
-  plan.exercises.forEach((ex, i) => {
+  if (plan.cardio){
     html += `
-      <div class="exercise-row" onclick="openExerciseDetail('${ex.id}')">
-        <div class="exercise-left">
-          <div class="exercise-idx">${i+1}</div>
-          <div>
-            <div class="exercise-name">${ex.name}</div>
-            <div class="exercise-equip">${ex.equip}</div>
-          </div>
+      <div class="cardio-chip">
+        <span class="dot"></span>
+        <div>
+          <div style="font-weight:700; font-size:13.5px;">${plan.cardioTitle}: ${plan.cardio.name}</div>
+          <div style="font-size:11.5px; color:var(--gris-600);">${plan.cardio.durMin} minutos${plan.routineType==="musculacion" ? ", ritmo moderado" : ""}</div>
         </div>
-        <div class="exercise-sr">${ex.reps}x${ex.sets}</div>
       </div>`;
-  });
-  html += `</div>`;
+  }
+
+  if (plan.exercises.length){
+    const tituloEj = plan.routineType === "cardio" ? "Circuito / accesorios" : "Ejercicios de hoy";
+    html += `<div class="card"><div class="section-title" style="margin-top:0;">${tituloEj}</div>`;
+    plan.exercises.forEach((ex, i) => {
+      html += `
+        <div class="exercise-row" onclick="openExerciseDetail('${ex.id}')">
+          <div class="exercise-left">
+            ${exerciseThumb(ex)}
+            <div>
+              <div class="exercise-name">${ex.name}</div>
+              <div class="exercise-equip">${ex.equip}</div>
+            </div>
+          </div>
+          <div class="exercise-sr">${ex.reps}x${ex.sets}</div>
+        </div>`;
+    });
+    html += `</div>`;
+  } else if (plan.cardio){
+    html += `
+      <div class="card" style="text-align:center;">
+        <div style="font-size:26px; margin-bottom:6px;">🏃</div>
+        <div style="font-weight:800; font-size:15px;">Hoy toca puro cardio</div>
+        <div style="color:var(--gris-600); font-size:13px; margin-top:4px; line-height:1.5;">
+          ${plan.cardio.durMin} minutos de ${plan.cardio.name.toLowerCase()}. Mantené un ritmo que puedas sostener, ${profile.nombre}.
+        </div>
+      </div>`;
+  }
 
   if (!already){
     html += `
@@ -406,12 +513,77 @@ function renderHome(){
       </div>`;
   }
 
+  html += buildUpcomingCard();
+
   c.innerHTML = html;
+}
+
+/* Tarjeta "Ver otro día": tira de próximos 7 días + selector de fecha.
+   Tocar un día abre la rutina de ese día en un modal (solo lectura). */
+function buildUpcomingCard(){
+  const today = new Date();
+  let chips = "";
+  for (let i = 1; i <= 7; i++){
+    const d = new Date(today); d.setDate(d.getDate() + i);
+    const ds = fmtDate(d);
+    const dt = getDayTypeForDate(ds);
+    const entrena = !!(dt && dt.key);
+    const etq = i === 1 ? "Mañana" : DIAS_CORTO[d.getDay()];
+    chips += `
+      <div class="upday ${entrena ? "train" : "rest"}" onclick="openDayPreview('${ds}')">
+        <div class="upday-dow">${etq}</div>
+        <div class="upday-num">${d.getDate()}</div>
+        <div class="upday-dot">${entrena ? "•" : ""}</div>
+      </div>`;
+  }
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+  return `
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Ver otro día</div>
+      <p style="font-size:13px; color:var(--gris-600); margin:0 0 12px;">Mirá qué te toca mañana o cualquier día que elijas.</p>
+      <div class="upstrip">${chips}</div>
+      <div class="upstrip-picker">
+        <input type="date" id="inp-preview-date" value="${fmtDate(tomorrow)}">
+        <button class="btn btn-outline btn-sm" onclick="openDayPreview(document.getElementById('inp-preview-date').value)">Ver rutina</button>
+      </div>
+    </div>`;
+}
+
+/* Modal de solo lectura con la rutina de un día cualquiera */
+function openDayPreview(dateStr){
+  if (!dateStr) { toast("Elegí una fecha"); return; }
+  const plan = generateDayPlan(dateStr);
+  const d = parseDate(dateStr);
+  const titulo = `${DIAS_NOMBRE[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
+  let body = `<div class="modal-title">${titulo}</div>`;
+  if (plan.rest){
+    body += `<div class="modal-desc">Día de descanso 🛌 — no hay rutina programada para este día.</div>
+             <button class="btn btn-outline" onclick="closeModal()">Cerrar</button>`;
+  } else {
+    body += `<div class="preview-daytag">${plan.dayType.label}</div>`;
+    if (plan.cardio){
+      body += `<div class="cardio-chip" style="margin:12px 0;">
+        <span class="dot"></span>
+        <div><div style="font-weight:700; font-size:13.5px;">${plan.cardioTitle}: ${plan.cardio.name}</div>
+        <div style="font-size:11.5px; color:var(--gris-600);">${plan.cardio.durMin} min</div></div></div>`;
+    }
+    plan.exercises.forEach((ex, i) => {
+      body += `
+        <div class="exercise-row">
+          <div class="exercise-left">${exerciseThumb({...ex})}
+            <div><div class="exercise-name">${ex.name}</div><div class="exercise-equip">${ex.equip}</div></div></div>
+          <div class="exercise-sr">${ex.reps}x${ex.sets}</div>
+        </div>`;
+    });
+    body += `<button class="btn btn-outline" style="margin-top:16px;" onclick="closeModal()">Cerrar</button>`;
+  }
+  $("#modal-body").innerHTML = body;
+  $("#modal-overlay").classList.add("open");
 }
 
 function estimateSessionMinutes(plan){
   if (!plan || plan.rest) return 0;
-  let sec = plan.cardio.durMin * 60;
+  let sec = plan.cardio ? plan.cardio.durMin * 60 : 0;
   plan.exercises.forEach(ex => { sec += (SET_DURATION_SEC[ex.tipo]||70) * ex.sets; });
   return Math.round(sec/60);
 }
@@ -440,12 +612,11 @@ function markAttendance(fui){
 function openRescheduleModal(originDate, dayKey){
   const overlay = $("#modal-overlay");
   const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
-  const allSplits = SPLITS[3].concat(SPLITS[4]);
-  const label = (allSplits.find(s=>s.key===dayKey) || {}).label || "";
+  const label = (findSplitEntryByKey(dayKey) || {}).label || "tu sesión";
   $("#modal-body").innerHTML = `
-    <div class="modal-title">¿Cuándo lo reponés?</div>
-    <div class="modal-desc">Elegí el día en el que vas a hacer esta rutina (${label}) como reposición.</div>
-    <div class="field"><input type="date" id="inp-reschedule" min="${fmtDate(tomorrow)}" value="${fmtDate(tomorrow)}"></div>
+    <div class="modal-title">¿Qué día lo reponés?</div>
+    <div class="modal-desc">No pasa nada 🙌 Elegí el día en el que vas a hacer <b>${label}</b> como reposición y lo marcamos en tu calendario.</div>
+    <div class="field"><label>Día de reposición</label><input type="date" id="inp-reschedule" min="${fmtDate(tomorrow)}" value="${fmtDate(tomorrow)}"></div>
     <button class="btn btn-red" onclick="confirmReschedule('${originDate}','${dayKey}')">Reprogramar</button>
     <button class="btn btn-ghost" onclick="closeModal()">Ahora no</button>
   `;
@@ -482,12 +653,10 @@ function findExerciseById(id){
 function openExerciseDetail(id){
   const ex = findExerciseById(id);
   if (!ex) return;
-  const archetype = EXERCISE_IMAGE[id] || "bench_press_flat";
-  const cue = EXERCISE_CUE[archetype] || "";
+  const archetype = EXERCISE_IMAGE[id] || "";
+  const cue = EXERCISE_CUE[archetype] || "Mantené la técnica controlada en todo el recorrido y respirá de forma pareja.";
   $("#modal-body").innerHTML = `
-    <div style="width:100%; border-radius:16px; overflow:hidden; background:#f6f6f8; margin-bottom:16px;">
-      <img src="images/exercises/${archetype}.svg" alt="${ex.name}" style="width:100%; display:block;">
-    </div>
+    <div class="ex-art-box">${exerciseArt(ex)}</div>
     <div class="modal-title">${ex.name}</div>
     <div style="display:flex; gap:8px; margin:6px 0 12px;">
       <span class="exercise-sr" style="background:var(--gris-100); color:var(--gris-800);">${ex.equip}</span>
@@ -552,6 +721,75 @@ function logWeight(){
 }
 
 /* =========================================================
+   PANTALLA: TIPO DE RUTINA
+   ========================================================= */
+let tipoSeleccionado = null;
+function renderTipo(){
+  const actual = currentRoutineType();
+  tipoSeleccionado = actual;
+  const c = $("#tab-tipo");
+  const cards = Object.keys(ROUTINE_TYPES).map(key => {
+    const t = ROUTINE_TYPES[key];
+    return `
+      <div class="tipo-card ${key===actual ? "current" : ""}" data-tipo="${key}" onclick="selectTipo('${key}')">
+        <div class="tipo-emoji">${t.emoji}</div>
+        <div class="tipo-body">
+          <div class="tipo-name">${t.label} ${key===actual ? '<span class="tipo-badge">Actual</span>' : ""}</div>
+          <div class="tipo-desc">${t.desc}</div>
+        </div>
+        <div class="tipo-radio"></div>
+      </div>`;
+  }).join("");
+
+  c.innerHTML = `
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Elegí tu tipo de rutina</div>
+      <p style="font-size:13px; color:var(--gris-600); margin:0 0 14px; line-height:1.5;">
+        El cambio se aplica <b>desde la fecha que elijas en adelante</b>. Los días que ya asististe
+        no se tocan y tus métricas quedan intactas.
+      </p>
+      <div class="tipo-list">${cards}</div>
+      <div class="field" style="margin-top:16px;">
+        <label>Aplicar desde</label>
+        <input type="date" id="inp-tipo-desde" value="${todayStr()}" min="${todayStr()}">
+      </div>
+      <button class="btn btn-primary" onclick="saveTipo()">Guardar tipo de rutina</button>
+    </div>
+    <div class="card" id="tipo-preview"></div>
+  `;
+  updateTipoUI();
+}
+
+function selectTipo(key){
+  tipoSeleccionado = key;
+  updateTipoUI();
+}
+
+function updateTipoUI(){
+  $$(".tipo-card").forEach(el => el.classList.toggle("selected", el.dataset.tipo === tipoSeleccionado));
+  const t = ROUTINE_TYPES[tipoSeleccionado];
+  const dias = State.trainingDays().length;
+  const split = getSplitFor(tipoSeleccionado, dias);
+  let rows = split.map((s,i) => `
+    <div class="exercise-row"><div class="exercise-left"><div class="exercise-idx">${i+1}</div>
+      <div><div class="exercise-name">${s.label}</div><div class="exercise-equip">${s.corto}</div></div></div></div>`).join("");
+  $("#tipo-preview").innerHTML = `
+    <div class="section-title" style="margin-top:0;">Cómo queda ${t.label}</div>
+    <p style="font-size:13px; color:var(--gris-600); margin:0 0 8px;">Con tus ${dias} días entrenados, la semana se arma así:</p>
+    ${rows}`;
+}
+
+function saveTipo(){
+  const desde = $("#inp-tipo-desde").value || todayStr();
+  const log = State.routineTypeLog().filter(e => e.from !== desde);
+  log.push({ from: desde, type: tipoSeleccionado });
+  log.sort((a,b)=>a.from.localeCompare(b.from));
+  State.saveRoutineTypeLog(log);
+  toast(`Rutina cambiada a ${ROUTINE_TYPES[tipoSeleccionado].label} 💪`);
+  goTo("inicio");
+}
+
+/* =========================================================
    PANTALLA: DÍAS DE RUTINA
    ========================================================= */
 let tempDias = [];
@@ -579,10 +817,12 @@ function renderDias(){
 
 function updateDiasPreview(){
   const n = tempDias.length;
+  const type = currentRoutineType();
+  const tipoLabel = ROUTINE_TYPES[type].label;
   $("#dias-hint").textContent = n < 2
     ? "Elegí al menos 2 días."
-    : `Con ${n} días vamos a usar una división de ${n <= 3 ? "3 días (Pecho+Bíceps / Espalda+Tríceps+Hombro / Piernas)" : "4 días (Pecho+Tríceps / Espalda+Bíceps / Piernas / Hombro+Core)"}.`;
-  const split = n <= 3 ? SPLITS[3] : SPLITS[4];
+    : `Con ${n} días usamos una división de ${n <= 3 ? "3" : "4"} días para tu rutina de ${tipoLabel}.`;
+  const split = getSplitFor(type, n);
   const sorted = tempDias.slice().sort((a,b)=>a-b);
   let html = `<div class="section-title" style="margin-top:0;">Vista previa semanal</div>`;
   sorted.forEach((d, i) => {
@@ -679,9 +919,12 @@ function openDayDetail(dateStr){
     <div class="card">
       <div class="section-title" style="margin-top:0;">${titulo}${plan.dayType.repuesto ? " · Reposición" : ""}</div>
       <div style="font-weight:800; font-size:15px; margin-bottom:10px;">${plan.dayType.label}</div>
+      ${plan.cardio ? `<div class="cardio-chip" style="margin-bottom:10px;"><span class="dot"></span>
+        <div><div style="font-weight:700; font-size:13.5px;">${plan.cardioTitle}: ${plan.cardio.name}</div>
+        <div style="font-size:11.5px; color:var(--gris-600);">${plan.cardio.durMin} min</div></div></div>` : ""}
       ${plan.exercises.map((ex,i)=>`
         <div class="exercise-row" onclick="openExerciseDetail('${ex.id}')">
-          <div class="exercise-left"><div class="exercise-idx">${i+1}</div>
+          <div class="exercise-left">${exerciseThumb(ex)}
             <div><div class="exercise-name">${ex.name}</div><div class="exercise-equip">${ex.equip}</div></div></div>
           <div class="exercise-sr">${ex.reps}x${ex.sets}</div>
         </div>`).join("")}

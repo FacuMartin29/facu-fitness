@@ -9,8 +9,8 @@
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="icon" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Facu Fitness">
@@ -24,11 +24,13 @@
 
   <!-- ===================== SPLASH ===================== -->
   <div class="screen active" id="screen-splash">
-    <div>
-      <img src="icons/icon-source.png" class="splash-logo" alt="Facu Fitness">
-      <h1 class="splash-title">FACU<span>FITNESS</span></h1>
-      <div class="splash-sub">Tu rutina, tu ritmo</div>
-      <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+    <div class="splash-inner">
+      <img class="splash-logo-img" src="icons/splash-logo.png" alt="Facu Fitness">
+      <div class="splash-sub">mejorando el número 29 en pista</div>
+      <svg class="splash-ring" viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="ring-track" cx="60" cy="60" r="54"></circle>
+        <circle class="ring-fill"  cx="60" cy="60" r="54"></circle>
+      </svg>
     </div>
   </div>
 
@@ -89,6 +91,7 @@
 
     <div class="content" id="main-content">
       <div class="tab-content" id="tab-inicio" style="display:block;"></div>
+      <div class="tab-content" id="tab-tipo" style="display:none;"></div>
       <div class="tab-content" id="tab-datos" style="display:none;"></div>
       <div class="tab-content" id="tab-dias" style="display:none;"></div>
       <div class="tab-content" id="tab-asistencias" style="display:none;"></div>
@@ -120,6 +123,7 @@
 
 </div>
 
+<script src="art.js"></script>
 <script src="exercises.js"></script>
 <script src="app.js"></script>
 <script>
@@ -127,9 +131,38 @@
   document.getElementById("burger-btn").innerHTML =
     '<svg viewBox="0 0 24 24" fill="none" stroke="#0d0d0f" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
 
+  // ===== Service Worker + auto-actualización =====
+  // Registra el SW y, cuando detecta una versión nueva ya activa,
+  // recarga la app sola para que los cambios impacten sin abrir Safari.
   if ("serviceWorker" in navigator) {
+    let refreshing = false;
+    // ¿La página ya estaba controlada por un SW al cargar? Si no, la primera
+    // instalación NO debe recargar (evita un reload molesto la primera vez).
+    const yaControlada = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshing || !yaControlada) return;
+      refreshing = true;
+      window.location.reload();
+    });
+
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+      navigator.serviceWorker.register("sw.js").then((reg) => {
+        // Si aparece un worker nuevo, apenas quede instalado le pedimos que tome el control
+        reg.addEventListener("updatefound", () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener("statechange", () => {
+            if (nw.state === "installed" && navigator.serviceWorker.controller) {
+              nw.postMessage({ type: "SKIP_WAITING" });
+            }
+          });
+        });
+        // Chequea si hay versión nueva cada vez que volvés a la app
+        setInterval(() => reg.update(), 60 * 1000);
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") reg.update();
+        });
+      }).catch(() => {});
     });
   }
 </script>

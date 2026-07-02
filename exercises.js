@@ -98,6 +98,56 @@ const EXERCISE_DB = {
     { id: "car01", name: "Bicicleta estática", equip: "Bici", durMin: 8, met: 5.5 },
     { id: "car02", name: "Cinta — caminata rápida / trote suave", equip: "Cinta", durMin: 8, met: 4.3 },
   ],
+
+  // Ejercicios de circuito metabólico (peso corporal / alta densidad),
+  // usados en rutinas de tipo Cardio y Mix. MET alto y descanso corto.
+  cardio_circuit: [
+    { id: "cir01", name: "Burpees", equip: "Peso corporal", sets: 4, reps: "12", tipo: "metabolico" },
+    { id: "cir02", name: "Escaladores (mountain climbers)", equip: "Peso corporal", sets: 4, reps: "40 seg", tipo: "metabolico" },
+    { id: "cir03", name: "Saltos de tijera (jumping jacks)", equip: "Peso corporal", sets: 4, reps: "45 seg", tipo: "metabolico" },
+    { id: "cir04", name: "Sentadillas con salto", equip: "Peso corporal", sets: 4, reps: "15", tipo: "metabolico" },
+    { id: "cir05", name: "Rodillas altas (high knees)", equip: "Peso corporal", sets: 4, reps: "40 seg", tipo: "metabolico" },
+    { id: "cir06", name: "Zancadas alternadas con salto", equip: "Peso corporal", sets: 3, reps: "12", tipo: "metabolico" },
+    { id: "cir07", name: "Thrusters con mancuernas", equip: "Mancuernas", sets: 4, reps: "12", tipo: "metabolico" },
+    { id: "cir08", name: "Swing con mancuerna / kettlebell", equip: "Mancuernas", sets: 4, reps: "15", tipo: "metabolico" },
+    { id: "cir09", name: "Saltar la cuerda", equip: "Accesorio", sets: 4, reps: "60 seg", tipo: "metabolico" },
+    { id: "cir10", name: "Plancha con toque de hombro", equip: "Peso corporal", sets: 3, reps: "40 seg", tipo: "metabolico" },
+  ],
+};
+
+/* =========================================================
+   BLOQUES CARDIOVASCULARES PRINCIPALES (rutinas Cardio / Mix)
+   METs aproximados del Compendio de Actividades Físicas:
+   HIIT/sprints ~9-10, trote ~8, bici vigorosa ~8, remo ~7,
+   caminata inclinada / elíptica ~5-6.
+   ========================================================= */
+const CARDIO_MODES = {
+  // Intervalos de alta intensidad
+  hiit: [
+    { id: "hiit01", name: "HIIT en bici — 30s fuerte / 30s suave", equip: "Bici", durMin: 24, met: 9.0 },
+    { id: "hiit02", name: "HIIT en cinta — sprints 30/30", equip: "Cinta", durMin: 22, met: 9.5 },
+    { id: "hiit03", name: "Intervalos en remo — 250m x 6", equip: "Remo", durMin: 22, met: 8.5 },
+  ],
+  // Cardio continuo de baja intensidad (LISS)
+  liss: [
+    { id: "liss01", name: "Cinta — caminata inclinada sostenida", equip: "Cinta", durMin: 45, met: 5.0 },
+    { id: "liss02", name: "Bici — ritmo constante moderado", equip: "Bici", durMin: 45, met: 6.0 },
+    { id: "liss03", name: "Elíptica — ritmo continuo", equip: "Elíptica", durMin: 40, met: 5.5 },
+  ],
+  // Ritmo sostenido / tempo (umbral)
+  tempo: [
+    { id: "tmp01", name: "Trote continuo a ritmo cómodo", equip: "Cinta/Pista", durMin: 35, met: 8.0 },
+    { id: "tmp02", name: "Bici — tempo umbral", equip: "Bici", durMin: 35, met: 7.5 },
+    { id: "tmp03", name: "Remo continuo moderado", equip: "Remo", durMin: 30, met: 7.0 },
+  ],
+  // Bloque de cardio dentro de un día de fuerza (tipo Mix)
+  mix: [
+    { id: "mix01", name: "Bici — ritmo moderado sostenido", equip: "Bici", durMin: 18, met: 6.5 },
+    { id: "mix02", name: "Cinta — trote suave continuo", equip: "Cinta", durMin: 18, met: 7.0 },
+    { id: "mix03", name: "Remo continuo", equip: "Remo", durMin: 15, met: 7.0 },
+  ],
+  // Calentamiento corto (tipo Musculación) — reutiliza el catálogo base
+  warmup: EXERCISE_DB.cardio,
 };
 
 /* Duración estimada por serie (segundos) para cálculo de tiempo/calorías,
@@ -106,6 +156,7 @@ const SET_DURATION_SEC = {
   compuesto: 40 + 90,   // trabajo + descanso
   aislado: 30 + 60,
   "isométrico": 40 + 60,
+  metabolico: 40 + 25,  // circuito: mucho trabajo, poco descanso
 };
 
 /* METs aproximados de entrenamiento de fuerza según intensidad
@@ -114,6 +165,7 @@ const MET_FUERZA = {
   compuesto: 6.0,   // esfuerzo intenso, multiarticular
   aislado: 4.0,     // esfuerzo moderado, monoarticular
   "isométrico": 3.0,
+  metabolico: 8.0,  // circuito metabólico / pliométrico
 };
 
 /* Mapeo ejercicio -> pictograma (images/exercises/<archetype>.svg) */
@@ -200,5 +252,5 @@ const EXERCISE_CUE = {
 };
 
 if (typeof module !== "undefined") {
-  module.exports = { EXERCISE_DB, SET_DURATION_SEC, MET_FUERZA, EXERCISE_IMAGE, EXERCISE_CUE };
+  module.exports = { EXERCISE_DB, CARDIO_MODES, SET_DURATION_SEC, MET_FUERZA, EXERCISE_IMAGE, EXERCISE_CUE };
 }
