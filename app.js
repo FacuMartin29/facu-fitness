@@ -817,13 +817,24 @@ function openExerciseDetail(id, date, back, slotId){
   $("#modal-overlay").classList.add("open");
 }
 
-/* Picker para reemplazar un ejercicio por otro del mismo grupo muscular */
+/* Picker para reemplazar un ejercicio por otro del mismo grupo muscular.
+   Excluye los otros ejercicios que YA tenés ese día en el mismo grupo,
+   así no repetís (ej: si hacés 3 de bíceps, no te ofrece los otros 2). */
 function openSwapPicker(slotId, grupo, date, back){
-  const pool = (EXERCISE_DB[grupo] || []);
   const swaps = State.swaps();
   const activo = (swaps[date] || {})[slotId];
+  const plan = generateDayPlan(date);
+  const currentId = (plan.exercises.find(e => (e.swappedFrom || e.id) === slotId) || {}).id || activo || slotId;
+  // ids del mismo grupo ocupados por OTROS slots de ese día
+  const usedByOthers = new Set(
+    (plan.exercises || [])
+      .filter(e => e.grupo === grupo && (e.swappedFrom || e.id) !== slotId)
+      .map(e => e.id)
+  );
+  const pool = (EXERCISE_DB[grupo] || []).filter(e => !usedByOthers.has(e.id));
+
   const rows = pool.map(e => {
-    const sel = (e.id === activo) || (!activo && e.id === slotId);
+    const sel = e.id === currentId;
     return `
       <div class="exercise-row" onclick="applySwap('${slotId}','${e.id}','${grupo}','${date}','${back}')">
         <div class="exercise-left">${exerciseThumb({...e, grupo})}
@@ -831,12 +842,15 @@ function openSwapPicker(slotId, grupo, date, back){
         <div class="exercise-sr" style="${sel ? "" : "background:var(--gris-100);color:var(--gris-600);"}">${sel ? "Actual" : "Elegir"}</div>
       </div>`;
   }).join("");
+
+  const vacio = pool.length <= 1;
   $("#modal-body").innerHTML = `
-    <div class="modal-title">Elegí el ejercicio</div>
-    <div class="modal-desc">Reemplazá por otro del mismo grupo. Aplica solo para ese día.</div>
+    <div class="modal-title">Cambiar ejercicio</div>
+    <div class="modal-desc">Elegí otro del mismo grupo (no te mostramos los que ya hacés hoy). Aplica solo para ese día.</div>
     ${activo ? `<button class="btn btn-outline" style="margin-bottom:12px;" onclick="applySwap('${slotId}','${slotId}','${grupo}','${date}','${back}')">↩︎ Volver al ejercicio original</button>` : ""}
+    ${vacio ? `<div class="hint-box" style="margin-bottom:12px;">No hay otros ejercicios disponibles para este grupo hoy.</div>` : ""}
     <div style="max-height:52vh; overflow-y:auto; margin-bottom:8px;">${rows}</div>
-    <button class="btn btn-ghost" onclick="openExerciseDetail('${activo||slotId}','${date}','${back}','${slotId}')">Cancelar</button>
+    <button class="btn btn-ghost" onclick="openExerciseDetail('${currentId}','${date}','${back}','${slotId}')">Cancelar</button>
   `;
   $("#modal-overlay").classList.add("open");
 }

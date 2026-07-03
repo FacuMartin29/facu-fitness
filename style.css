@@ -48,14 +48,24 @@ input, select{font-family:inherit;}
 
 /* ===================== SPLASH ===================== */
 #screen-splash{
-  background: radial-gradient(120% 120% at 50% 20%, var(--negro2) 0%, var(--negro) 70%);
+  background: #000;
   color: var(--blanco);
   align-items:center;
   justify-content:center;
   text-align:center;
   min-height:100vh;
+  position:relative;
+  overflow:hidden;
 }
-.splash-inner{ display:flex; flex-direction:column; align-items:center; padding: 0 24px; }
+/* Brillo rojo sutil detrás del logo (así el negro no queda plano) */
+#screen-splash::before{
+  content:''; position:absolute; left:50%; top:44%;
+  width:min(420px,90vw); height:min(420px,90vw);
+  transform:translate(-50%,-50%);
+  background: radial-gradient(circle, rgba(224,49,49,.18), transparent 62%);
+  pointer-events:none;
+}
+.splash-inner{ display:flex; flex-direction:column; align-items:center; padding: 0 24px; position:relative; z-index:1; }
 .splash-logo-img{
   width: 250px; max-width: 74vw; height:auto; display:block;
   margin: 0 auto 6px;
