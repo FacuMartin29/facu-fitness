@@ -207,8 +207,10 @@ function getDayTypeForDate(dateStr){
   if (idx === -1) return null;
   const type = getRoutineTypeForDate(dateStr);
   const split = getSplitFor(type, days.length);
-  if (idx >= split.length) return null;
-  return { ...split[idx], repuesto: false };
+  if (!split.length) return null;
+  // Si entrenás más días que largo del split, la división se repite en ciclo
+  // para que TODOS los días tengan rutina (hasta los 7 días de la semana).
+  return { ...split[idx % split.length], repuesto: false };
 }
 
 /* Elige N ejercicios de un grupo muscular rotando según semana ISO, para variar la rutina */
@@ -394,7 +396,7 @@ function toggleOnbDay(idx, chipEl){
 function updateOnbDaysHint(){
   const n = onb.dias.length;
   $("#onb-days-count").textContent = n;
-  $("#btn-onb-finish").disabled = (n < 2 || n > 5);
+  $("#btn-onb-finish").disabled = (n < 2 || n > 7);
 }
 
 function onbFinish(){
@@ -614,6 +616,20 @@ function renderHome(){
         <div style="font-weight:800; font-size:15px;">¡Buen trabajo, ${profile.nombre}!</div>
         <div style="color:var(--gris-600); font-size:13px; margin-top:4px;">Ya quedó registrada tu asistencia de hoy.</div>
       </div>`;
+  } else if (already.status === "no_asistio") {
+    html += `
+      <div class="card">
+        <div class="section-title" style="margin-top:0;">Marcaste que hoy no fuiste</div>
+        <p style="color:var(--gris-600); font-size:13.5px; line-height:1.5; margin:0 0 12px;">
+          ${already.repuestoEn
+            ? `Lo vas a reponer el <b>${fmtShort(already.repuestoEn)}</b>. Podés cambiar el día si querés.`
+            : `Podés elegir otro día para reponer esta sesión (${plan.dayType.label}).`}
+        </p>
+        <button class="btn btn-primary" onclick="openRescheduleModal('${today}','${plan.dayType.key}')">
+          ${already.repuestoEn ? "🔁 Cambiar día de reemplazo" : "📅 Elegir día de reemplazo"}
+        </button>
+        <button class="btn btn-ghost" style="margin-top:8px;" onclick="undoNoAsistio('${today}')">Deshacer (sí fui)</button>
+      </div>`;
   }
 
   html += buildUpcomingCard();
@@ -723,11 +739,13 @@ function openRescheduleModal(originDate, dayKey){
   const overlay = $("#modal-overlay");
   const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
   const label = (findSplitEntryByKey(dayKey) || {}).label || "tu sesión";
+  const att = State.attendance()[originDate] || {};
+  const actual = att.repuestoEn && att.repuestoEn >= fmtDate(tomorrow) ? att.repuestoEn : fmtDate(tomorrow);
   $("#modal-body").innerHTML = `
     <div class="modal-title">¿Qué día lo reponés?</div>
     <div class="modal-desc">No pasa nada 🙌 Elegí el día en el que vas a hacer <b>${label}</b> como reposición y lo marcamos en tu calendario.</div>
-    <div class="field"><label>Día de reposición</label><input type="date" id="inp-reschedule" min="${fmtDate(tomorrow)}" value="${fmtDate(tomorrow)}"></div>
-    <button class="btn btn-red" onclick="confirmReschedule('${originDate}','${dayKey}')">Reprogramar</button>
+    <div class="field"><label>Día de reposición</label><input type="date" id="inp-reschedule" min="${fmtDate(tomorrow)}" value="${actual}"></div>
+    <button class="btn btn-red" onclick="confirmReschedule('${originDate}','${dayKey}')">${att.repuestoEn ? "Cambiar día" : "Reprogramar"}</button>
     <button class="btn btn-ghost" onclick="closeModal()">Ahora no</button>
   `;
   overlay.classList.add("open");
@@ -737,13 +755,31 @@ function confirmReschedule(originDate, dayKey){
   const newDate = $("#inp-reschedule").value;
   if (!newDate){ toast("Elegí una fecha válida"); return; }
   const makeups = State.makeups();
+  const attendance = State.attendance();
+  const prev = attendance[originDate] && attendance[originDate].repuestoEn;
+  if (prev && prev !== newDate) delete makeups[prev]; // limpiar reposición anterior
   makeups[newDate] = { dayKey, origen: originDate };
   State.saveMakeups(makeups);
-  const attendance = State.attendance();
+  if (!attendance[originDate]) attendance[originDate] = { status: "no_asistio", dayKey };
   attendance[originDate].repuestoEn = newDate;
   State.saveAttendance(attendance);
   closeModal();
   toast(`Reprogramado para el ${fmtShort(newDate)} ✅`);
+  renderHome();
+}
+
+/* Deshace un "no fui": borra el registro (y su reposición si tenía) */
+function undoNoAsistio(date){
+  const attendance = State.attendance();
+  const rec = attendance[date];
+  if (rec && rec.repuestoEn){
+    const makeups = State.makeups();
+    delete makeups[rec.repuestoEn];
+    State.saveMakeups(makeups);
+  }
+  delete attendance[date];
+  State.saveAttendance(attendance);
+  toast("Listo, lo podés volver a marcar");
   renderHome();
 }
 
@@ -881,6 +917,8 @@ function renderDatos(){
     <div class="card">
       <div class="field"><label>Nombre</label><input id="d-nombre" value="${p.nombre||""}"></div>
       <div class="field"><label>Apellido</label><input id="d-apellido" value="${p.apellido||""}"></div>
+      <div class="field"><label>Correo electrónico</label><input id="d-email" type="email" autocapitalize="off" autocomplete="email" placeholder="tucorreo@ejemplo.com" value="${p.email||""}"></div>
+      <div class="field"><label>Fecha de cumpleaños</label><input id="d-cumple" type="date" value="${p.cumple||""}"></div>
       <div class="field-row">
         <div class="field"><label>Edad</label><input id="d-edad" type="number" value="${p.edad||""}"></div>
         <div class="field"><label>Peso (kg)</label><input id="d-peso" type="number" step="0.1" value="${p.peso||""}"></div>
@@ -983,6 +1021,10 @@ function saveDatos(){
   const p = State.profile();
   p.nombre = $("#d-nombre").value.trim() || p.nombre;
   p.apellido = $("#d-apellido").value.trim();
+  const email = $("#d-email").value.trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast("Revisá el correo, no parece válido 📧"); return; }
+  p.email = email;
+  p.cumple = $("#d-cumple").value || "";
   p.edad = +$("#d-edad").value || p.edad;
   p.peso = +$("#d-peso").value || p.peso;
   p.altura = +$("#d-altura").value || p.altura;
@@ -1122,7 +1164,7 @@ function renderDias(){
   c.innerHTML = `
     <div class="card">
       <div class="section-title" style="margin-top:0;">¿Qué días entrenás?</div>
-      <p style="font-size:13px; color:var(--gris-600); margin-top:0;">Elegí 3 o 4 días. Si cambiás esto, tu rutina semanal se recalcula automáticamente.</p>
+      <p style="font-size:13px; color:var(--gris-600); margin-top:0;">Elegí de 2 a 7 días. Si cambiás esto, tu rutina semanal se recalcula automáticamente.</p>
       <div class="daychip-grid" id="dias-grid"></div>
       <div class="hint-box" id="dias-hint"></div>
     </div>
@@ -1142,14 +1184,14 @@ function updateDiasPreview(){
   const n = tempDias.length;
   const type = currentRoutineType();
   const tipoLabel = ROUTINE_TYPES[type].label;
+  const split = getSplitFor(type, n);
   $("#dias-hint").textContent = n < 2
     ? "Elegí al menos 2 días."
-    : `Con ${n} días usamos una división de ${n <= 3 ? "3" : "4"} días para tu rutina de ${tipoLabel}.`;
-  const split = getSplitFor(type, n);
+    : `Con ${n} días usamos una división de ${split.length} días${n > split.length ? " que se repite en ciclo para cubrir todos tus días" : ""} (rutina de ${tipoLabel}).`;
   const sorted = tempDias.slice().sort((a,b)=>a-b);
   let html = `<div class="section-title" style="margin-top:0;">Vista previa semanal</div>`;
   sorted.forEach((d, i) => {
-    const s = split[i];
+    const s = split[i % split.length];
     html += `<div class="exercise-row"><div class="exercise-left"><div class="exercise-idx">${DIAS_CORTO[d]}</div>
       <div><div class="exercise-name">${DIAS_NOMBRE[d]}</div><div class="exercise-equip">${s ? s.label : "—"}</div></div></div></div>`;
   });

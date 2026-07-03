@@ -117,6 +117,9 @@ input, select{font-family:inherit;}
   background:var(--blanco); font-size:16px; color:var(--negro); outline:none; transition:border-color .15s;
 }
 .field input:focus, .field select:focus{ border-color: var(--rojo); }
+/* iOS: los inputs de fecha tienen un ancho intrínseco que se desborda del contenedor */
+input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:none; min-width:0; max-width:100%; }
+.field input[type="date"]::-webkit-date-and-time-value{ text-align:left; margin:0; }
 .field-row{ display:flex; gap:12px; }
 .field-row .field{ flex:1; }
 
