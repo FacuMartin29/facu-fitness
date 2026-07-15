@@ -1,5 +1,5 @@
 /* =========================================================
-   FACU FITNESS — Base de datos de ejercicios
+   FAC FIT — Base de datos de ejercicios
    Series/repeticiones basadas en rangos de hipertrofia general
    (8-15 reps, 3-4 series, RIR 1-3) usados en rutinas
    Push/Pull/Legs y Torso-Pierna. Los METs son aproximaciones

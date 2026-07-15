@@ -1,6 +1,6 @@
 {
-  "name": "Facu Fitness",
-  "short_name": "Facu Fitness",
+  "name": "Fac Fit",
+  "short_name": "Fac Fit",
   "description": "Tu rutina de gimnasio, día por día. Sin logueo, sin vueltas.",
   "start_url": "./index.html",
   "scope": "./",

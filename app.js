@@ -1,5 +1,5 @@
 /* =========================================================
-   FACU FITNESS — app.js
+   FAC FIT — app.js
    ========================================================= */
 
 /* ---------- CONFIG DE SPLITS ---------- */
@@ -979,13 +979,13 @@ function saveObjetivoNivel(){
 /* ---------- BACKUP: exportar / importar ---------- */
 const BACKUP_KEYS = ["ff_profile","ff_trainingDays","ff_attendance","ff_makeups","ff_routineTypeLog","ff_focus","ff_swaps","ff_weightLog"];
 function exportData(){
-  const data = { app:"facu-fitness", version:1, exportedAt:new Date().toISOString(), data:{} };
+  const data = { app:"fac-fit", version:1, exportedAt:new Date().toISOString(), data:{} };
   BACKUP_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v != null) data.data[k] = v; });
   const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `facu-fitness-backup-${todayStr()}.json`;
+  a.download = `fac-fit-backup-${todayStr()}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
   toast("Respaldo descargado ⤓");

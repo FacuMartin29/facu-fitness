@@ -1,5 +1,5 @@
 /* =========================================================
-   FACU FITNESS — art.js
+   FAC FIT — art.js
    Arte 100% inline (SVG en JS). No depende de archivos:
    así no hay imágenes rotas ni cache que falle, y funciona
    offline. Íconos por equipamiento, color por grupo muscular.

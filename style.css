@@ -65,10 +65,13 @@ input, select{font-family:inherit;}
   background: radial-gradient(circle, rgba(224,49,49,.18), transparent 62%);
   pointer-events:none;
 }
-.splash-inner{ display:flex; flex-direction:column; align-items:center; padding: 0 24px; position:relative; z-index:1; }
+.splash-inner{ width:100%; display:flex; flex-direction:column; align-items:center; padding: 0; position:relative; z-index:1; }
 .splash-logo-img{
-  width: 250px; max-width: 74vw; height:auto; display:block;
-  margin: 0 auto 6px;
+  width: 100%; max-width: 560px; height:auto; display:block;
+  margin: 0 auto 14px;
+  /* Difuminado arriba/abajo para que el banner se funda con el fondo negro */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 15%, #000 85%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 15%, #000 85%, transparent 100%);
   animation: pop .7s cubic-bezier(.2,1.4,.4,1);
   transform-origin: center center;
   transition: transform .6s cubic-bezier(.3,0,.15,1), opacity .55s ease;
@@ -81,8 +84,9 @@ input, select{font-family:inherit;}
   font-weight: 600;
   font-style: italic;
   margin-top:4px;
+  padding: 0 24px;
   text-align:center;
-  max-width: 260px;
+  max-width: 300px;
   transition: opacity .35s ease;
 }
 .splash-sub::before{ content:"“"; } .splash-sub::after{ content:"”"; }
@@ -166,7 +170,7 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 }
 .burger span, .burger::before, .burger::after{ display:none; }
 .burger svg{ width:20px; height:20px; }
-.topbar-title{ font-family: var(--font-display); font-size:18px; letter-spacing:.3px; }
+.topbar-title{ font-family: 'Bangers', var(--font-display); font-size:26px; letter-spacing:1.5px; line-height:1; }
 .topbar-title span{ color:var(--rojo); }
 .topbar-avatar{
   width:42px; height:42px; border-radius:50%; background:var(--negro); color:var(--blanco);

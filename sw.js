@@ -1,11 +1,11 @@
 /* =========================================================
-   FACU FITNESS — Service Worker
+   FAC FIT — Service Worker
    Estrategia network-first para el "shell" de la app (HTML/JS/CSS):
    siempre intenta traer la última versión de la red y cae al cache
    solo si no hay conexión. Así cada cambio publicado impacta apenas
    entrás, sin tener que reinstalar ni abrir Safari.
    ========================================================= */
-const CACHE_NAME = "facufitness-v8";
+const CACHE_NAME = "facfit-v10";
 
 // El shell de la app + logo/íconos. Las fotos de ejercicios (images/exercises/*)
 // NO van acá para no hacer pesada la instalación: se cachean solas la primera

@@ -1,4 +1,4 @@
-# Facu Fitness 🏋️
+# Fac Fit 🏋️
 
 App de rutinas de gimnasio, sin login, pensada para instalarse en tu iPhone
 como si fuera una app nativa (PWA - Progressive Web App).
@@ -35,7 +35,7 @@ Esa es la dirección de tu app. Andá abriéndola desde el iPhone (Safari) para 
 1. Abrí **Safari** en el iPhone (tiene que ser Safari, no Chrome) y entrá a la URL de tu app.
 2. Tocá el ícono de **Compartir** (el cuadradito con la flecha hacia arriba).
 3. Deslizá y elegí **"Agregar a pantalla de inicio"**.
-4. Confirmá el nombre (Facu Fitness) y tocá **Agregar**.
+4. Confirmá el nombre (Fac Fit) y tocá **Agregar**.
 
 Va a aparecer un ícono más en tu pantalla de inicio, como cualquier app. Al abrirlo,
 ocupa toda la pantalla (sin la barra de Safari) y funciona incluso sin internet
