@@ -37,7 +37,9 @@ async function authBoot(){
       return;
     }
   } catch(e){}
-  showScreen("#screen-auth");
+  // Sin sesión: si tiene Face ID configurado, vamos al login con esa opción
+  if (biometricEnrolled()){ showScreen("#screen-login"); refreshBiometricUI(); }
+  else showScreen("#screen-auth");
 }
 
 /* Ya autenticado: si completó el onboarding va al home, si no lo arranca */
@@ -116,15 +118,18 @@ async function authLogin(){
   if (error){ setBtnLoading("#btn-login", false); authToast("Correo o contraseña incorrectos"); return; }
   await pullUserData();
   setBtnLoading("#btn-login", false);
-  afterAuth();
+  maybeOfferBiometric();
 }
 
 /* ---------------- LOGOUT ---------------- */
 async function authLogout(){
-  try { if (sb) await sb.auth.signOut(); } catch(e){}
+  // scope local: cierra la sesión en este dispositivo pero deja válido el
+  // token para poder reentrar con Face ID (si está activado).
+  try { if (sb) await sb.auth.signOut({ scope: "local" }); } catch(e){}
   SYNC_KEYS.forEach(k => localStorage.removeItem(k));
   if (window.closeMenu) closeMenu();
-  showScreen("#screen-auth");
+  if (biometricEnrolled()){ showScreen("#screen-login"); refreshBiometricUI(); }
+  else showScreen("#screen-auth");
   authToast("Cerraste sesión");
 }
 
@@ -164,6 +169,103 @@ async function pushUserData(){
   const blob = {};
   SYNC_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v != null) blob[k] = v; });
   try { await sb.from("profiles").upsert({ id: u.id, email: u.email, data: blob, updated_at: new Date().toISOString() }); } catch(e){}
+}
+
+/* ---------------- BIOMÉTRICO: Face ID / huella (WebAuthn) ---------------- */
+const BIO = { cred:"ff_bioCredId", tok:"ff_bioToken", email:"ff_bioEmail" };
+
+function _b64(buf){ return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))); }
+function _unb64(b64){ return Uint8Array.from(atob(b64), c => c.charCodeAt(0)); }
+function _rand(n){ const a = new Uint8Array(n); crypto.getRandomValues(a); return a; }
+
+async function biometricAvailable(){
+  try {
+    if (!window.PublicKeyCredential || !navigator.credentials) return false;
+    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  } catch(e){ return false; }
+}
+function biometricEnrolled(){ return !!localStorage.getItem(BIO.cred); }
+
+/* Muestra u oculta el botón "Entrar con Face ID" y precarga el email */
+function refreshBiometricUI(){
+  const btn = $("#btn-biometric");
+  if (btn) btn.style.display = biometricEnrolled() ? "block" : "none";
+  const em = $("#auth-login-email");
+  const saved = localStorage.getItem(BIO.email);
+  if (em && !em.value && saved) em.value = saved;
+}
+
+/* Tras un login exitoso, ofrece activar Face ID (si el equipo lo soporta) */
+async function maybeOfferBiometric(){
+  if (!biometricEnrolled() && sb && await biometricAvailable()){ showScreen("#screen-bio"); }
+  else afterAuth();
+}
+function skipBiometric(){ afterAuth(); }
+
+/* Activar Face ID: crea la credencial y guarda la sesión detrás del biométrico */
+async function enableBiometric(fromSettings){
+  if (!sb) return false;
+  if (!(await biometricAvailable())){ authToast("Tu dispositivo no ofrece Face ID/huella acá"); return false; }
+  const { data } = await sb.auth.getSession();
+  if (!data || !data.session){ authToast("Iniciá sesión primero"); return false; }
+  const u = data.session.user;
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: _rand(32),
+      rp: { name: "Fac Fit" },
+      user: { id: new TextEncoder().encode(u.id), name: u.email || "usuario", displayName: u.email || "Fac Fit" },
+      pubKeyCredParams: [{ type:"public-key", alg:-7 }, { type:"public-key", alg:-257 }],
+      authenticatorSelection: { authenticatorAttachment:"platform", userVerification:"required" },
+      timeout: 60000, attestation:"none"
+    }});
+    localStorage.setItem(BIO.cred, _b64(cred.rawId));
+    localStorage.setItem(BIO.tok, JSON.stringify({ access_token:data.session.access_token, refresh_token:data.session.refresh_token }));
+    localStorage.setItem(BIO.email, u.email || "");
+    authToast("Face ID activado ✅");
+    if (fromSettings){ renderDatos(); } else { afterAuth(); }
+    return true;
+  } catch(e){
+    authToast("No se pudo activar Face ID");
+    if (!fromSettings) afterAuth();
+    return false;
+  }
+}
+
+function disableBiometric(){
+  localStorage.removeItem(BIO.cred); localStorage.removeItem(BIO.tok); localStorage.removeItem(BIO.email);
+  if (typeof renderDatos === "function" && document.getElementById("tab-datos")) renderDatos();
+  refreshBiometricUI();
+}
+
+/* Toggle desde Datos personales */
+function toggleBiometric(){
+  if (biometricEnrolled()){ disableBiometric(); authToast("Face ID desactivado"); }
+  else enableBiometric(true);
+}
+
+/* Entrar con Face ID: pide el biométrico y restaura la sesión guardada */
+async function biometricLogin(){
+  if (!sb || !biometricEnrolled()){ return; }
+  try {
+    await navigator.credentials.get({ publicKey: {
+      challenge: _rand(32),
+      allowCredentials: [{ type:"public-key", id: _unb64(localStorage.getItem(BIO.cred)) }],
+      userVerification:"required", timeout:60000
+    }});
+  } catch(e){ authToast("No se pudo verificar tu Face ID"); return; }
+  // Biométrico OK -> restauramos la sesión con el token guardado
+  const t = JSON.parse(localStorage.getItem(BIO.tok) || "{}");
+  let res = await sb.auth.setSession({ access_token: t.access_token, refresh_token: t.refresh_token });
+  if (res.error){ res = await sb.auth.refreshSession({ refresh_token: t.refresh_token }); }
+  if (res.error || !res.data || !res.data.session){
+    authToast("Tu sesión expiró, entrá con tu contraseña una vez");
+    disableBiometric();
+    return;
+  }
+  const s = res.data.session;
+  localStorage.setItem(BIO.tok, JSON.stringify({ access_token:s.access_token, refresh_token:s.refresh_token }));
+  await pullUserData();
+  afterAuth();
 }
 
 /* ---------------- helpers ---------------- */

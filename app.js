@@ -413,8 +413,8 @@ function onbFinish(){
   State.saveTrainingDays(onb.dias);
   State.saveWeightLog([{ date: todayStr(), peso: onb.peso }]);
   toast(`¡Bienvenido, ${profile.nombre}! Tu rutina ya está lista 💪`);
-  renderHome();
-  showScreen("#screen-main");
+  if (typeof maybeOfferBiometric === "function") maybeOfferBiometric();
+  else { renderHome(); showScreen("#screen-main"); }
 }
 
 /* =========================================================
@@ -959,11 +959,21 @@ function renderDatos(){
       <button class="btn btn-outline" onclick="logWeight()">Guardar registro</button>
     </div>
 
+    <div class="card" id="card-seguridad" style="display:none;">
+      <div class="section-title" style="margin-top:0;">Seguridad</div>
+      <div class="bio-row">
+        <div>
+          <div style="font-weight:700; font-size:14.5px;">Ingreso con Face ID / huella</div>
+          <div style="font-size:12.5px; color:var(--gris-600);">Entrá sin escribir la contraseña.</div>
+        </div>
+        <button class="bio-toggle" id="bio-toggle" onclick="toggleBiometric()" aria-label="Activar Face ID"><span></span></button>
+      </div>
+    </div>
+
     <div class="card">
       <div class="section-title" style="margin-top:0;">Copia de seguridad</div>
       <p style="font-size:13px; color:var(--gris-600); margin:0 0 12px; line-height:1.5;">
-        Tus datos viven <b>solo en este teléfono</b>. Si borrás los datos del sitio en Safari, se pierden.
-        Guardá un respaldo cada tanto y así podés restaurarlo o pasarlo a otro dispositivo.
+        Tus datos se guardan en tu cuenta (nube). Igual podés exportar un respaldo para tenerlo aparte o pasarlo a otro lado.
       </p>
       <button class="btn btn-outline" onclick="exportData()">⤓ Exportar respaldo</button>
       <input type="file" id="d-import-file" accept="application/json,.json" style="display:none" onchange="importDataFile(this)">
@@ -972,6 +982,13 @@ function renderDatos(){
   `;
   const sel = $("#d-objetivo");
   if (sel) sel.onchange = () => { $("#d-obj-hint").textContent = OBJETIVOS[sel.value].desc; };
+  // Mostrar la opción de Face ID solo si el dispositivo lo soporta
+  if (typeof biometricAvailable === "function"){
+    biometricAvailable().then(ok => {
+      const card = $("#card-seguridad"); const tog = $("#bio-toggle");
+      if (ok && card){ card.style.display = "block"; if (tog) tog.classList.toggle("on", biometricEnrolled()); }
+    });
+  }
 }
 
 function saveObjetivoNivel(){
