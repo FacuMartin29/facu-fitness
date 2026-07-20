@@ -433,6 +433,21 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 /* Marca de ejercicio reemplazado */
 .swap-mark{ font-size:11px; }
 
+/* ===================== AUTH (login / registro) ===================== */
+.auth-brand{
+  font-family:'Bangers', var(--font-display); font-size:42px; letter-spacing:2px;
+  line-height:1; margin-bottom:24px; color:var(--negro);
+}
+.auth-brand span{ color:var(--rojo); }
+#screen-auth .onb-wrap, #screen-login .onb-wrap, #screen-register .onb-wrap,
+#screen-otp .onb-wrap, #screen-setpass .onb-wrap{ justify-content:flex-start; }
+.menu-logout{
+  margin-top:18px; width:100%; padding:13px; border-radius:12px;
+  border:1.5px solid var(--gris-800); background:transparent; color:var(--gris-200);
+  font-weight:700; font-size:14px; cursor:pointer; transition:transform .1s, background .15s;
+}
+.menu-logout:active{ transform:scale(.98); background:var(--negro2); }
+
 @media (prefers-reduced-motion: reduce){
   *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }

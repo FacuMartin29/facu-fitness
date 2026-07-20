@@ -82,7 +82,13 @@ const Store = {
     try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
     catch(e){ return fallback; }
   },
-  set(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} },
+  set(key, val){
+    try{
+      localStorage.setItem(key, JSON.stringify(val));
+      // Sincroniza los datos del usuario con la nube (Supabase), con debounce
+      if (key.indexOf("ff_") === 0 && typeof scheduleCloudSync === "function") scheduleCloudSync();
+    }catch(e){}
+  },
 };
 
 const State = {
@@ -344,16 +350,12 @@ function initials(name, last){
 const onb = { nombre:"", apellido:"", edad:"", peso:"", altura:"", dias:[] };
 
 function initApp(){
-  const profile = State.profile();
   const splash = $("#screen-splash");
-  const goNext = () => {
-    if (profile && profile.onboardDone) { renderHome(); showScreen("#screen-main"); }
-    else { showScreen("#screen-onb-name"); }
-  };
-  // El anillo se llena en 3s (CSS). Al terminar, el logo se expande y luego pasamos.
+  // El anillo se llena en 3s (CSS). Al terminar, el logo se expande y
+  // el flujo de auth decide: login/registro, onboarding o home.
   setTimeout(() => {
     splash.classList.add("zoom");
-    setTimeout(goNext, 620);   // espera a que termine la animación de expansión
+    setTimeout(() => { authBoot(); }, 620);
   }, 3000);
 }
 
@@ -401,8 +403,10 @@ function updateOnbDaysHint(){
 
 function onbFinish(){
   if (onb.dias.length < 2){ toast("Elegí al menos 2 días de entrenamiento"); return; }
+  const existing = State.profile() || {};
   const profile = {
-    nombre: onb.nombre, apellido: "", edad: onb.edad, peso: onb.peso, altura: onb.altura,
+    ...existing,
+    nombre: onb.nombre, apellido: existing.apellido || "", edad: onb.edad, peso: onb.peso, altura: onb.altura,
     onboardDone: true,
   };
   State.saveProfile(profile);
@@ -492,6 +496,8 @@ function updateBottomNav(){
 function buildMenu(){
   const profile = State.profile();
   $("#menu-user-name").textContent = profile ? profile.nombre : "";
+  const sub = document.querySelector(".menu-user .sub");
+  if (sub) sub.textContent = (profile && profile.email) ? profile.email : "Fac Fit";
   $("#menu-user-avatar").textContent = profile ? initials(profile.nombre, profile.apellido) : "";
   $("#topbar-avatar").textContent = profile ? initials(profile.nombre, profile.apellido) : "";
   const nav = $("#menu-nav");

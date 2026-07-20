@@ -35,13 +35,75 @@
     </div>
   </div>
 
+  <!-- ===================== AUTH: BIENVENIDA ===================== -->
+  <div class="screen" id="screen-auth">
+    <div class="onb-wrap">
+      <div class="auth-brand">FAC <span>FIT</span></div>
+      <div class="onb-title">Tu gimnasio, ordenado.</div>
+      <div class="onb-desc">Creá tu cuenta o iniciá sesión para tener tu rutina, tus asistencias y tu progreso en un solo lugar.</div>
+      <div class="spacer"></div>
+      <button class="btn btn-primary" onclick="goRegister()">Crear cuenta</button>
+      <button class="btn btn-outline" style="margin-top:10px;" onclick="goLogin()">Ya tengo cuenta</button>
+    </div>
+  </div>
+
+  <!-- ===================== AUTH: LOGIN ===================== -->
+  <div class="screen" id="screen-login">
+    <div class="onb-wrap">
+      <div class="auth-brand">FAC <span>FIT</span></div>
+      <div class="onb-title">Iniciá sesión</div>
+      <div class="onb-desc">Ingresá con tu correo y contraseña.</div>
+      <div class="field"><label>Correo</label><input id="auth-login-email" type="email" autocapitalize="off" autocomplete="email" placeholder="tucorreo@ejemplo.com"></div>
+      <div class="field"><label>Contraseña</label><input id="auth-login-pass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+      <button class="btn btn-primary" id="btn-login" onclick="authLogin()">Ingresar</button>
+      <button class="btn btn-ghost" style="margin-top:6px;" onclick="authBack()">‹ Volver</button>
+    </div>
+  </div>
+
+  <!-- ===================== AUTH: REGISTRO (email) ===================== -->
+  <div class="screen" id="screen-register">
+    <div class="onb-wrap">
+      <div class="auth-brand">FAC <span>FIT</span></div>
+      <div class="onb-title">Creá tu cuenta</div>
+      <div class="onb-desc">Ingresá tu correo y te enviamos un código de 6 dígitos para validarlo.</div>
+      <div class="field"><label>Correo electrónico</label><input id="auth-reg-email" type="email" autocapitalize="off" autocomplete="email" placeholder="tucorreo@ejemplo.com"></div>
+      <button class="btn btn-primary" id="btn-send-code" onclick="authSendCode()">Enviar código</button>
+      <button class="btn btn-ghost" style="margin-top:6px;" onclick="authBack()">‹ Volver</button>
+    </div>
+  </div>
+
+  <!-- ===================== AUTH: CÓDIGO ===================== -->
+  <div class="screen" id="screen-otp">
+    <div class="onb-wrap">
+      <div class="auth-brand">FAC <span>FIT</span></div>
+      <div class="onb-title">Revisá tu correo</div>
+      <div class="onb-desc">Te enviamos un código de 6 dígitos a <b id="otp-email-label"></b>. Ingresalo acá (revisá también spam).</div>
+      <div class="field"><label>Código</label><input id="auth-otp" type="text" inputmode="numeric" maxlength="6" placeholder="——————" style="letter-spacing:10px; font-size:24px; text-align:center; font-weight:800;"></div>
+      <button class="btn btn-primary" id="btn-verify" onclick="authVerifyCode()">Verificar</button>
+      <button class="btn btn-ghost" style="margin-top:6px;" onclick="authResend()">Reenviar código</button>
+      <button class="btn btn-ghost" onclick="goRegister()">‹ Cambiar correo</button>
+    </div>
+  </div>
+
+  <!-- ===================== AUTH: CONTRASEÑA ===================== -->
+  <div class="screen" id="screen-setpass">
+    <div class="onb-wrap">
+      <div class="auth-brand">FAC <span>FIT</span></div>
+      <div class="onb-title">Creá tu contraseña</div>
+      <div class="onb-desc">La vas a usar para iniciar sesión la próxima vez.</div>
+      <div class="field"><label>Contraseña</label><input id="auth-newpass" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres"></div>
+      <div class="field"><label>Repetir contraseña</label><input id="auth-newpass2" type="password" autocomplete="new-password" placeholder="Repetí la contraseña"></div>
+      <button class="btn btn-primary" id="btn-setpass" onclick="authSetPassword()">Continuar</button>
+    </div>
+  </div>
+
   <!-- ===================== ONBOARDING: NOMBRE ===================== -->
   <div class="screen" id="screen-onb-name">
     <div class="onb-wrap">
       <div class="onb-progress"><i class="done"></i><i></i><i></i></div>
       <div class="onb-eyebrow">Paso 1 de 3</div>
       <div class="onb-title">¿Cómo te llamás?</div>
-      <div class="onb-desc">Así vamos a saludarte dentro de la app. Nada de logueo, ni mails, ni contraseñas — solo tu nombre.</div>
+      <div class="onb-desc">¡Cuenta creada! 🎉 Ahora contanos cómo te llamás para personalizar tu experiencia.</div>
       <div class="field">
         <label>Nombre</label>
         <input id="inp-nombre" placeholder="Ej: Facu" autocomplete="off">
@@ -113,7 +175,8 @@
       </div>
     </div>
     <div class="menu-nav" id="menu-nav"></div>
-    <div class="menu-footer">Fac Fit · hecho con Claudio 🤖<br>Tus datos quedan solo en este teléfono.</div>
+    <button class="menu-logout" onclick="authLogout()">Cerrar sesión</button>
+    <div class="menu-footer">Fac Fit · hecho con Claudio 🤖<br>Tu cuenta y tus datos se guardan en la nube.</div>
   </div>
 
   <!-- ===================== MODAL ===================== -->
@@ -126,9 +189,11 @@
 
 </div>
 
+<script src="vendor/supabase.js"></script>
 <script src="art.js"></script>
 <script src="exercises.js"></script>
 <script src="exercise-media.js"></script>
+<script src="auth.js"></script>
 <script src="app.js"></script>
 <script>
   // Reemplazo del ícono de hamburguesa (evita depender del orden de carga de app.js)
