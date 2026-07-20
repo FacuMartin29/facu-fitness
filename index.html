@@ -69,7 +69,7 @@
     <div class="onb-wrap">
       <div class="auth-brand">FAC <span>FIT</span></div>
       <div class="onb-title">Creá tu cuenta</div>
-      <div class="onb-desc">Ingresá tu correo y te enviamos un código de 6 dígitos para validarlo.</div>
+      <div class="onb-desc">Ingresá tu correo y te enviamos un código para validarlo.</div>
       <div class="field"><label>Correo electrónico</label><input id="auth-reg-email" type="email" autocapitalize="off" autocomplete="email" placeholder="tucorreo@ejemplo.com"></div>
       <button class="btn btn-primary" id="btn-send-code" onclick="authSendCode()">Enviar código</button>
       <button class="btn btn-ghost" style="margin-top:6px;" onclick="authBack()">‹ Volver</button>
@@ -81,8 +81,8 @@
     <div class="onb-wrap">
       <div class="auth-brand">FAC <span>FIT</span></div>
       <div class="onb-title">Revisá tu correo</div>
-      <div class="onb-desc">Te enviamos un código de 6 dígitos a <b id="otp-email-label"></b>. Ingresalo acá (revisá también spam).</div>
-      <div class="field"><label>Código</label><input id="auth-otp" type="text" inputmode="numeric" maxlength="6" placeholder="——————" style="letter-spacing:10px; font-size:24px; text-align:center; font-weight:800;"></div>
+      <div class="onb-desc">Te enviamos el código a <b id="otp-email-label"></b>. Ingresalo acá (revisá también spam).</div>
+      <div class="field"><label>Código</label><input id="auth-otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Ingresá el código" style="letter-spacing:6px; font-size:22px; text-align:center; font-weight:800;"></div>
       <button class="btn btn-primary" id="btn-verify" onclick="authVerifyCode()">Verificar</button>
       <button class="btn btn-ghost" style="margin-top:6px;" onclick="authResend()">Reenviar código</button>
       <button class="btn btn-ghost" onclick="goRegister()">‹ Cambiar correo</button>

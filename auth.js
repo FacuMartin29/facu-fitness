@@ -81,7 +81,7 @@ async function authResend(){
 /* ---------------- REGISTRO: 2) verificar código ---------------- */
 async function authVerifyCode(){
   const token = ($("#auth-otp").value || "").replace(/\D/g,"").trim();
-  if (token.length < 6){ authToast("El código tiene 6 dígitos"); return; }
+  if (token.length < 6){ authToast("Ingresá el código completo tal cual llegó al mail"); return; }
   if (!sb){ return; }
   setBtnLoading("#btn-verify", true);
   const { error } = await sb.auth.verifyOtp({ email: authState.email, token, type: "email" });
