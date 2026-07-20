@@ -124,7 +124,11 @@
       <div class="onb-desc">¡Cuenta creada! 🎉 Ahora contanos cómo te llamás para personalizar tu experiencia.</div>
       <div class="field">
         <label>Nombre</label>
-        <input id="inp-nombre" placeholder="Ej: Facu" autocomplete="off">
+        <input id="inp-nombre" placeholder="Ej: Facu" autocomplete="given-name">
+      </div>
+      <div class="field">
+        <label>Apellido</label>
+        <input id="inp-apellido" placeholder="Ej: Quinteros" autocomplete="family-name">
       </div>
       <div class="spacer"></div>
       <button class="btn btn-primary" onclick="onbNameNext()">Continuar</button>
@@ -138,7 +142,10 @@
       <div class="onb-eyebrow">Paso 2 de 3</div>
       <div class="onb-title">Contanos un poco de vos</div>
       <div class="onb-desc">Con esto calculamos tus métricas y estimamos las calorías de cada rutina.</div>
-      <div class="field"><label>Edad</label><input id="inp-edad" type="number" placeholder="Ej: 28"></div>
+      <div class="field-row">
+        <div class="field"><label>Edad</label><input id="inp-edad" type="number" placeholder="Ej: 28"></div>
+        <div class="field"><label>Cumpleaños</label><input id="inp-cumple" type="date"></div>
+      </div>
       <div class="field-row">
         <div class="field"><label>Peso (kg)</label><input id="inp-peso" type="number" step="0.1" placeholder="Ej: 78"></div>
         <div class="field"><label>Altura (cm)</label><input id="inp-altura" type="number" placeholder="Ej: 178"></div>
@@ -167,7 +174,7 @@
     <div class="topbar">
       <button class="burger" id="burger-btn"></button>
       <div class="topbar-title">FAC <span>FIT</span></div>
-      <div class="topbar-avatar" id="topbar-avatar">F</div>
+      <div class="topbar-avatar" id="topbar-avatar" onclick="goTo('datos')" role="button" title="Datos personales">F</div>
     </div>
 
     <div class="content" id="main-content">

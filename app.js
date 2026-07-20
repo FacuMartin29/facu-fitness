@@ -347,7 +347,7 @@ function initials(name, last){
 }
 
 /* ---------- ONBOARDING STATE (temporal, hasta guardar) ---------- */
-const onb = { nombre:"", apellido:"", edad:"", peso:"", altura:"", dias:[] };
+const onb = { nombre:"", apellido:"", cumple:"", edad:"", peso:"", altura:"", dias:[] };
 
 function initApp(){
   const splash = $("#screen-splash");
@@ -364,6 +364,7 @@ function onbNameNext(){
   const v = $("#inp-nombre").value.trim();
   if (!v){ toast("Che, poné tu nombre para arrancar 👋"); return; }
   onb.nombre = v;
+  onb.apellido = $("#inp-apellido").value.trim();
   showScreen("#screen-onb-datos");
 }
 
@@ -372,6 +373,7 @@ function onbDatosNext(){
   const edad = +$("#inp-edad").value, peso = +$("#inp-peso").value, altura = +$("#inp-altura").value;
   if (!edad || !peso || !altura){ toast("Completá edad, peso y altura para continuar"); return; }
   onb.edad = edad; onb.peso = peso; onb.altura = altura;
+  onb.cumple = $("#inp-cumple").value || "";
   showScreen("#screen-onb-dias");
   renderOnbDayChips($("#onb-day-grid"), onb.dias, toggleOnbDay);
 }
@@ -406,7 +408,9 @@ function onbFinish(){
   const existing = State.profile() || {};
   const profile = {
     ...existing,
-    nombre: onb.nombre, apellido: existing.apellido || "", edad: onb.edad, peso: onb.peso, altura: onb.altura,
+    nombre: onb.nombre, apellido: onb.apellido || existing.apellido || "",
+    cumple: onb.cumple || existing.cumple || "",
+    edad: onb.edad, peso: onb.peso, altura: onb.altura,
     onboardDone: true,
   };
   State.saveProfile(profile);

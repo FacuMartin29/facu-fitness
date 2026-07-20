@@ -43,10 +43,24 @@ async function authBoot(){
 }
 
 /* Ya autenticado: si completó el onboarding va al home, si no lo arranca */
-function afterAuth(){
+async function afterAuth(){
+  await ensureProfileEmail();
   const p = State.profile();
   if (p && p.onboardDone){ renderHome(); showScreen("#screen-main"); }
   else { resetOnb(); showScreen("#screen-onb-name"); }
+}
+
+/* Garantiza que el email de la cuenta quede guardado en el perfil local */
+async function ensureProfileEmail(){
+  if (!sb) return;
+  try {
+    const { data } = await sb.auth.getUser();
+    const u = data && data.user;
+    if (u && u.email){
+      const p = State.profile() || {};
+      if (p.email !== u.email){ p.email = u.email; State.saveProfile(p); }
+    }
+  } catch(e){}
 }
 
 /* ---------------- NAVEGACIÓN ENTRE PANTALLAS DE AUTH ---------------- */

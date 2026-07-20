@@ -175,7 +175,9 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .topbar-avatar{
   width:42px; height:42px; border-radius:50%; background:var(--negro); color:var(--blanco);
   display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px;
+  cursor:pointer; transition:transform .1s;
 }
+.topbar-avatar:active{ transform:scale(.92); }
 
 .content{ padding: 4px 18px calc(90px + env(safe-area-inset-bottom)); flex:1; }
 
