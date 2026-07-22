@@ -431,6 +431,7 @@ const MENU_ITEMS = [
   { id: "dias", label: "Días de rutina", icon: "calendar" },
   { id: "asistencias", label: "Asistencias", icon: "check" },
   { id: "metricas", label: "Métricas", icon: "chart" },
+  { id: "encuesta", label: "Tu opinión", icon: "chat" },
 ];
 
 const ICONS = {
@@ -440,6 +441,7 @@ const ICONS = {
   check: '<path d="M4 12l6 6L20 6"/>',
   chart: '<path d="M4 20V10M12 20V4M20 20v-7"/>',
   dumbbell: '<path d="M6.5 6.5l11 11"/><path d="M3 8l2-2 3 3-2 2z"/><path d="M16 19l2-2 3-3-2-2-3 3z" transform="translate(-1,-1)"/><path d="M2 12l2 2M20 10l2 2"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
 };
 function svgIcon(name, extra=""){
@@ -466,6 +468,7 @@ function goTo(tabId){
   if (tabId === "dias") renderDias();
   if (tabId === "asistencias") renderAsistencias();
   if (tabId === "metricas") renderMetricas();
+  if (tabId === "encuesta") renderEncuesta();
   $$(".tab-content").forEach(el => el.style.display = "none");
   const active = $("#tab-" + tabId);
   if (active) active.style.display = "block";
@@ -1098,6 +1101,92 @@ function logWeight(){
   const p = State.profile(); p.peso = val; State.saveProfile(p);
   toast("Registro de peso guardado 📉");
   renderDatos();
+}
+
+/* =========================================================
+   PANTALLA: ENCUESTA / FEEDBACK
+   ========================================================= */
+const ENCUESTA = [
+  { id:"nps",        type:"nps",   q:"¿Qué tan probable es que le recomiendes Fac Fit a un amigo/a?", sub:"0 = nada · 10 = totalmente" },
+  { id:"facilidad",  type:"score", q:"¿Qué tan fácil te resulta usar la app?" },
+  { id:"rutinas",    type:"score", q:"¿Qué tan buenas te parecen las rutinas que te propone?" },
+  { id:"ejercicios", type:"score", q:"¿Las imágenes y explicaciones de los ejercicios te resultan útiles?" },
+  { id:"progreso",   type:"score", q:"¿Qué tan claro te resulta seguir tu progreso (métricas, racha, logros)?" },
+  { id:"frecuencia", type:"choice", q:"¿Con qué frecuencia entrenás usando la app?", opciones:["Casi todos los días","3 a 5 por semana","1 a 2 por semana","Casi nunca"] },
+  { id:"largo",      type:"choice", q:"¿La usarías a largo plazo?", opciones:["Sí, seguro","Tal vez","No"] },
+  { id:"gusta",      type:"text",  q:"¿Qué es lo que MÁS te gusta de la app?", ph:"Escribí lo que quieras…" },
+  { id:"cambiar",    type:"text",  q:"¿Qué le cambiarías o le agregarías?", ph:"Ideas, mejoras, lo que sea…" },
+  { id:"problema",   type:"text",  q:"¿Tuviste algún error o problema? ¿Cuál?", ph:"Contanos si algo falló…" },
+];
+let encuestaResp = {};
+
+function renderEncuesta(){
+  encuestaResp = {};
+  const yaEnviada = localStorage.getItem("ff_encuestaEnviada");
+  const c = $("#tab-encuesta");
+  let html = `
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Tu opinión nos importa 💬</div>
+      <p style="font-size:13.5px; color:var(--gris-600); margin:0; line-height:1.5;">
+        Son 10 preguntas rápidas sobre la app. Tus respuestas nos ayudan a mejorarla.
+        ${yaEnviada ? "<br><b>Ya respondiste antes — ¡gracias! Podés volver a enviar si querés.</b>" : ""}
+      </p>
+    </div>`;
+
+  ENCUESTA.forEach((p, i) => {
+    let control = "";
+    if (p.type === "score"){
+      control = `<div class="enc-scale">${[1,2,3,4,5].map(n=>`<button class="enc-dot" data-q="${p.id}" data-v="${n}" onclick="setEncuesta('${p.id}',${n},this)">${n}</button>`).join("")}</div>
+        <div class="enc-scale-lbl"><span>Malo</span><span>Excelente</span></div>`;
+    } else if (p.type === "nps"){
+      control = `<div class="enc-scale nps">${Array.from({length:11},(_,n)=>`<button class="enc-dot" data-q="${p.id}" data-v="${n}" onclick="setEncuesta('${p.id}',${n},this)">${n}</button>`).join("")}</div>`;
+    } else if (p.type === "choice"){
+      control = `<div class="enc-choices">${p.opciones.map(o=>`<button class="enc-choice" data-q="${p.id}" data-v="${o}" onclick="setEncuesta('${p.id}','${o.replace(/'/g,"\\'")}',this)">${o}</button>`).join("")}</div>`;
+    } else {
+      control = `<textarea class="enc-text" id="enc-${p.id}" rows="2" placeholder="${p.ph||""}"></textarea>`;
+    }
+    html += `
+      <div class="card enc-q">
+        <div class="enc-qnum">${i+1} de 10</div>
+        <div class="enc-qtext">${p.q}</div>
+        ${p.sub ? `<div class="enc-qsub">${p.sub}</div>` : ""}
+        ${control}
+      </div>`;
+  });
+
+  html += `<button class="btn btn-primary" onclick="submitEncuesta()">Enviar mis respuestas</button>`;
+  c.innerHTML = html;
+}
+
+function setEncuesta(qid, val, btn){
+  encuestaResp[qid] = val;
+  const group = btn.parentElement;
+  group.querySelectorAll("[data-q='"+qid+"']").forEach(b => b.classList.remove("sel"));
+  btn.classList.add("sel");
+}
+
+async function submitEncuesta(){
+  // leer las de texto
+  ENCUESTA.filter(p => p.type === "text").forEach(p => {
+    const el = $("#enc-" + p.id); if (el && el.value.trim()) encuestaResp[p.id] = el.value.trim();
+  });
+  if (Object.keys(encuestaResp).length < 3){ toast("Contestá al menos unas preguntas 🙏"); return; }
+
+  const profile = State.profile() || {};
+  const payload = { respuestas: encuestaResp, nombre: profile.nombre || "", app_version: (typeof CACHE_TAG !== "undefined" ? CACHE_TAG : "web") };
+  let guardado = false;
+  if (typeof sb !== "undefined" && sb){
+    try {
+      const u = await currentUser();
+      const { error } = await sb.from("feedback").insert({ user_id: u ? u.id : null, email: u ? u.email : (profile.email||null), answers: payload });
+      if (!error) guardado = true;
+    } catch(e){}
+  }
+  // respaldo local por si el envío falla
+  const prev = Store.get("ff_encuestas", []); prev.push({ fecha: new Date().toISOString(), ...payload }); Store.set("ff_encuestas", prev);
+  localStorage.setItem("ff_encuestaEnviada", todayStr());
+  toast(guardado ? "¡Gracias por tu opinión! 🙌" : "¡Gracias! Guardamos tu opinión 🙌");
+  goTo("inicio");
 }
 
 /* =========================================================

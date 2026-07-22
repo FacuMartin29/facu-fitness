@@ -233,7 +233,7 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .menu-user .sub{ font-size:12px; color:var(--gris-400); }
 .menu-nav{ display:flex; flex-direction:column; gap:4px; margin-top: 20px; }
 .menu-item{
-  display:flex; align-items:center; gap:14px; padding:13px 10px; border-radius:12px; color:var(--gris-200);
+  display:flex; align-items:center; gap:14px; padding:13px 10px; border-radius:12px; color:#d9dbe0;
   font-weight:700; font-size:15px; cursor:pointer; transition: background .15s;
 }
 .menu-item svg{ width:20px; height:20px; flex-shrink:0; opacity:.85; }
@@ -388,7 +388,7 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .upday:active{ transform:scale(.94); }
 .upday.train{ background:#fff0f0; }
 .upday-dow{ font-size:10px; font-weight:800; text-transform:uppercase; color:var(--gris-400); letter-spacing:.5px; }
-.upday-num{ font-size:18px; font-weight:800; color:var(--negro); margin-top:2px; }
+.upday-num{ font-size:18px; font-weight:800; color:var(--text); margin-top:2px; }
 .upday.train .upday-num{ color:var(--rojo); }
 .upday-dot{ height:8px; line-height:8px; color:var(--rojo); font-size:16px; }
 .upstrip-picker{ display:flex; gap:10px; align-items:center; margin-top:14px; }
@@ -487,17 +487,47 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .logro-label{ font-size:10px; font-weight:700; color:var(--gris-600); margin-top:4px; line-height:1.15; }
 .btn-share{ margin-bottom:16px; }
 
+/* ===================== ENCUESTA ===================== */
+.enc-q{ padding:16px 18px; }
+.enc-qnum{ font-size:10.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--rojo); margin-bottom:6px; }
+.enc-qtext{ font-size:15px; font-weight:700; color:var(--text); line-height:1.35; }
+.enc-qsub{ font-size:12px; color:var(--gris-600); margin-top:3px; }
+.enc-scale{ display:flex; gap:8px; margin-top:14px; }
+.enc-scale.nps{ gap:5px; flex-wrap:wrap; }
+.enc-dot{
+  flex:1; min-width:34px; aspect-ratio:1; border-radius:12px; border:1.5px solid var(--gris-200);
+  background:var(--surface); color:var(--gris-600); font-weight:800; font-size:15px; cursor:pointer;
+  transition:transform .1s, background .15s, color .15s, border-color .15s;
+}
+.enc-scale.nps .enc-dot{ font-size:13px; border-radius:9px; }
+.enc-dot:active{ transform:scale(.92); }
+.enc-dot.sel{ background:var(--rojo); border-color:var(--rojo); color:#fff; }
+.enc-scale-lbl{ display:flex; justify-content:space-between; font-size:10.5px; color:var(--gris-400); margin-top:6px; }
+.enc-choices{ display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+.enc-choice{
+  text-align:left; padding:13px 15px; border-radius:12px; border:1.5px solid var(--gris-200);
+  background:var(--surface); color:var(--text); font-weight:700; font-size:14px; cursor:pointer;
+  transition:transform .1s, background .15s, border-color .15s;
+}
+.enc-choice:active{ transform:scale(.99); }
+.enc-choice.sel{ background:var(--rojo-suave); border-color:var(--rojo); color:var(--rojo-oscuro); }
+.enc-text{
+  width:100%; margin-top:12px; padding:12px 14px; border-radius:12px; border:1.5px solid var(--gris-200);
+  background:var(--surface); color:var(--text); font-family:inherit; font-size:15px; resize:vertical; outline:none;
+}
+.enc-text:focus{ border-color:var(--rojo); }
+
 /* ===================== AUTH (login / registro) ===================== */
 .auth-brand{
   font-family:'Bangers', var(--font-display); font-size:42px; letter-spacing:2px;
-  line-height:1; margin-bottom:24px; color:var(--negro);
+  line-height:1; margin-bottom:24px; color:var(--text);
 }
 .auth-brand span{ color:var(--rojo); }
 #screen-auth .onb-wrap, #screen-login .onb-wrap, #screen-register .onb-wrap,
 #screen-otp .onb-wrap, #screen-setpass .onb-wrap{ justify-content:flex-start; }
 .menu-logout{
   margin-top:18px; width:100%; padding:13px; border-radius:12px;
-  border:1.5px solid var(--gris-800); background:transparent; color:var(--gris-200);
+  border:1.5px solid #3a3b40; background:transparent; color:#d9dbe0;
   font-weight:700; font-size:14px; cursor:pointer; transition:transform .1s, background .15s;
 }
 .menu-logout:active{ transform:scale(.98); background:var(--negro2); }
