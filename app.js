@@ -1428,6 +1428,99 @@ function buildLogrosCard(){
     </div>`;
 }
 
+/* =========================================================
+   COMPARTIR PROGRESO (genera una imagen para redes)
+   ========================================================= */
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+
+async function shareProgress(){
+  try { await document.fonts.ready; } catch(e){}
+  const g = computeGamification();
+  const m = computeMetrics();
+  const profile = State.profile() || {};
+  const nombre = ((profile.nombre||"") + " " + (profile.apellido||"")).trim() || "Atleta";
+
+  const W = 1080, H = 1080;
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+
+  // Fondo negro + brillo rojo
+  ctx.fillStyle = "#0d0d0f"; ctx.fillRect(0, 0, W, H);
+  const glow = ctx.createRadialGradient(W/2, 360, 40, W/2, 360, 680);
+  glow.addColorStop(0, "rgba(224,49,49,.30)"); glow.addColorStop(1, "rgba(224,49,49,0)");
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+
+  // Título FAC FIT
+  ctx.font = "120px Bangers, 'Arial Black', sans-serif";
+  const facW = ctx.measureText("FAC ").width, fitW = ctx.measureText("FIT").width;
+  const startX = W/2 - (facW+fitW)/2;
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#ffffff"; ctx.fillText("FAC ", startX, 180);
+  ctx.fillStyle = "#e03131"; ctx.fillText("FIT", startX+facW, 180);
+  ctx.textAlign = "center";
+
+  // tagline
+  ctx.font = "italic 600 30px Inter, sans-serif"; ctx.fillStyle = "#9a9ca4";
+  ctx.fillText("mi progreso", W/2, 232);
+
+  // Número grande: total de entrenamientos
+  ctx.font = "800 260px Inter, sans-serif"; ctx.fillStyle = "#ffffff";
+  ctx.fillText(String(m.totalSesiones), W/2, 560);
+  ctx.font = "800 34px Inter, sans-serif"; ctx.fillStyle = "#e03131";
+  ctx.fillText("ENTRENAMIENTOS COMPLETADOS", W/2, 620);
+
+  // 3 stat cards
+  const stats = [
+    { n: String(g.current), l: "Racha" },
+    { n: String(g.best), l: "Récord" },
+    { n: (m.totalKcal >= 1000 ? (m.totalKcal/1000).toFixed(1)+"k" : String(m.totalKcal)), l: "Kcal" },
+  ];
+  const cardW = 300, cardH = 190, gap = 20, totalW = cardW*3 + gap*2;
+  let cx = W/2 - totalW/2, cy = 700;
+  stats.forEach(s => {
+    ctx.fillStyle = "#17181b"; roundRect(ctx, cx, cy, cardW, cardH, 26); ctx.fill();
+    ctx.strokeStyle = "rgba(224,49,49,.35)"; ctx.lineWidth = 2; roundRect(ctx, cx, cy, cardW, cardH, 26); ctx.stroke();
+    ctx.fillStyle = "#ffffff"; ctx.font = "800 84px Inter, sans-serif";
+    ctx.fillText(s.n, cx + cardW/2, cy + 105);
+    ctx.fillStyle = "#9a9ca4"; ctx.font = "700 30px Inter, sans-serif";
+    ctx.fillText(s.l, cx + cardW/2, cy + 155);
+    cx += cardW + gap;
+  });
+
+  // Nombre + fecha
+  ctx.fillStyle = "#ffffff"; ctx.font = "800 46px Inter, sans-serif";
+  ctx.fillText(nombre, W/2, 990);
+  const hoy = new Date();
+  ctx.fillStyle = "#6c6e76"; ctx.font = "600 28px Inter, sans-serif";
+  ctx.fillText(`${hoy.getDate()} de ${MESES[hoy.getMonth()]} de ${hoy.getFullYear()}`, W/2, 1035);
+
+  // Exportar y compartir
+  cv.toBlob(async (blob) => {
+    if (!blob){ toast("No pude generar la imagen 😕"); return; }
+    const file = new File([blob], "facfit-progreso.png", { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })){
+      try { await navigator.share({ files: [file], title: "Mi progreso en Fac Fit", text: "Mi progreso en Fac Fit 💪🔥" }); }
+      catch(e){ /* cancelado */ }
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "facfit-progreso.png";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 1000);
+      toast("Imagen guardada 📸");
+    }
+  }, "image/png");
+}
+
 function computeMetrics(){
   const profile = State.profile();
   const attendance = State.attendance();
@@ -1464,6 +1557,7 @@ function renderMetricas(){
   const imcPos = Math.min(100, Math.max(0, ((m.imc - 15) / (35-15)) * 100));
 
   let html = `
+    <button class="btn btn-primary btn-share" onclick="shareProgress()">📲 Compartir mi progreso</button>
     <div class="stat-grid">
       <div class="stat-card"><div class="stat-num">${m.totalSesiones}</div><div class="stat-label">Sesiones completadas</div></div>
       <div class="stat-card"><div class="stat-num red">${m.totalKcal}</div><div class="stat-label">Kcal estimadas quemadas</div></div>
