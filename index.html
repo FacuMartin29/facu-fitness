@@ -6,6 +6,7 @@
 <title>Fac Fit</title>
 <meta name="theme-color" content="#0d0d0f">
 <meta name="description" content="Tu rutina de gimnasio, día por día.">
+<script>try{if(localStorage.getItem('ff_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
@@ -223,7 +224,7 @@
 <script>
   // Reemplazo del ícono de hamburguesa (evita depender del orden de carga de app.js)
   document.getElementById("burger-btn").innerHTML =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="#0d0d0f" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
 
   // ===== Service Worker + auto-actualización =====
   // Registra el SW y, cuando detecta una versión nueva ya activa,

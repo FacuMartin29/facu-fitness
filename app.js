@@ -473,6 +473,21 @@ function goTo(tabId){
   window.scrollTo(0,0);
 }
 
+/* ---------- TEMA (claro / oscuro) — preferencia local del dispositivo ---------- */
+function getTheme(){ return localStorage.getItem("ff_theme") || "light"; }
+function applyTheme(t){
+  if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+  else document.documentElement.removeAttribute("data-theme");
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", t === "dark" ? "#0d0d0f" : "#f1f1f4");
+}
+function toggleTheme(){
+  const next = getTheme() === "dark" ? "light" : "dark";
+  localStorage.setItem("ff_theme", next);
+  applyTheme(next);
+  if (currentTab === "datos") renderDatos();
+}
+
 /* ---------- BARRA DE NAVEGACIÓN INFERIOR ---------- */
 const BOTTOM_NAV = [
   { id: "inicio", label: "Inicio", icon: "home" },
@@ -533,6 +548,7 @@ function renderHome(){
 
   const c = $("#tab-inicio");
   let html = "";
+  html += buildStreakCard();
 
   if (plan.rest){
     html += `
@@ -963,6 +979,17 @@ function renderDatos(){
       <button class="btn btn-outline" onclick="logWeight()">Guardar registro</button>
     </div>
 
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Apariencia</div>
+      <div class="bio-row">
+        <div>
+          <div style="font-weight:700; font-size:14.5px;">Modo oscuro 🌙</div>
+          <div style="font-size:12.5px; color:var(--gris-600);">Ideal para entrenar de noche.</div>
+        </div>
+        <button class="bio-toggle ${getTheme()==='dark'?'on':''}" onclick="toggleTheme()" aria-label="Modo oscuro"><span></span></button>
+      </div>
+    </div>
+
     <div class="card" id="card-seguridad" style="display:none;">
       <div class="section-title" style="margin-top:0;">Seguridad</div>
       <div class="bio-row">
@@ -1328,6 +1355,79 @@ function openDayDetail(dateStr){
 /* =========================================================
    PANTALLA: MÉTRICAS
    ========================================================= */
+/* =========================================================
+   GAMIFICACIÓN: racha y logros
+   ========================================================= */
+function computeGamification(){
+  const att = State.attendance();
+  const total = Object.values(att).filter(a => a.status === "asistio").length;
+  const dates = Object.keys(att).sort();
+  let current = 0, best = 0, run = 0;
+  if (dates.length && State.trainingDays().length){
+    let d = parseDate(dates[0]);
+    const end = new Date();
+    while (d <= end){
+      const ds = fmtDate(d);
+      const dt = getDayTypeForDate(ds);
+      if (dt && dt.key){                       // es día de entreno
+        const a = att[ds];
+        if (a && a.status === "asistio"){ run++; best = Math.max(best, run); current = run; }
+        else if (a && a.status === "no_asistio" && a.repuestoEn){ /* repuesto: neutral */ }
+        else if (ds === todayStr()){ /* hoy pendiente: no corta */ }
+        else { run = 0; current = 0; }         // día de entreno pasado sin asistir: corta
+      }
+      d.setDate(d.getDate() + 1);
+    }
+  }
+  return { total, current, best };
+}
+
+const LOGROS = [
+  { emoji:"🎯", label:"Primer entreno",  req:m => m.total >= 1 },
+  { emoji:"💪", label:"10 sesiones",     req:m => m.total >= 10 },
+  { emoji:"🔥", label:"25 sesiones",     req:m => m.total >= 25 },
+  { emoji:"🏅", label:"50 sesiones",     req:m => m.total >= 50 },
+  { emoji:"🏆", label:"100 sesiones",    req:m => m.total >= 100 },
+  { emoji:"⚡", label:"Racha de 5",      req:m => m.best >= 5 },
+  { emoji:"🚀", label:"Racha de 10",     req:m => m.best >= 10 },
+  { emoji:"💎", label:"Racha de 20",     req:m => m.best >= 20 },
+];
+
+/* Tarjeta compacta de racha para el Inicio */
+function buildStreakCard(){
+  const g = computeGamification();
+  if (g.total < 1) return "";
+  const rachaTxt = g.current > 0
+    ? `<b>${g.current}</b> ${g.current === 1 ? "sesión" : "sesiones"} seguidas`
+    : `¡Volvé a arrancar tu racha!`;
+  return `
+    <div class="streak-card">
+      <div class="streak-fire">🔥</div>
+      <div class="streak-body">
+        <div class="streak-main">${rachaTxt}</div>
+        <div class="streak-sub">${g.total} entrenos en total${g.best > g.current ? ` · récord: ${g.best}` : ""}</div>
+      </div>
+    </div>`;
+}
+
+/* Tarjeta de logros para Métricas */
+function buildLogrosCard(){
+  const g = computeGamification();
+  const items = LOGROS.map(l => {
+    const on = l.req(g);
+    return `<div class="logro ${on ? "on" : ""}">
+      <div class="logro-emoji">${l.emoji}</div>
+      <div class="logro-label">${l.label}</div>
+    </div>`;
+  }).join("");
+  const cuantos = LOGROS.filter(l => l.req(g)).length;
+  return `
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Logros <span style="font-weight:600;color:var(--gris-400);text-transform:none;letter-spacing:0;">${cuantos}/${LOGROS.length}</span></div>
+      <div class="logros-grid">${items}</div>
+    </div>`;
+}
+
 function computeMetrics(){
   const profile = State.profile();
   const attendance = State.attendance();
@@ -1370,6 +1470,8 @@ function renderMetricas(){
       <div class="stat-card"><div class="stat-num">${m.kgEstimados.toFixed(2)}</div><div class="stat-label">Kg estimados por ejercicio</div></div>
       <div class="stat-card"><div class="stat-num">${m.imc.toFixed(1)}</div><div class="stat-label">IMC actual (${imcCategoria(m.imc)})</div></div>
     </div>
+
+    ${buildLogrosCard()}
 
     <div class="card">
       <div class="section-title" style="margin-top:0;">Índice de Masa Corporal</div>
