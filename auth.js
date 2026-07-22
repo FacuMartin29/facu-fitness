@@ -130,6 +130,8 @@ async function authLogin(){
   setBtnLoading("#btn-login", true);
   const { error } = await sb.auth.signInWithPassword({ email, password: pass });
   if (error){ setBtnLoading("#btn-login", false); authToast("Correo o contraseña incorrectos"); return; }
+  // Login explícito (posible cambio de cuenta): limpiamos lo local antes de traer los de esta cuenta
+  SYNC_KEYS.forEach(k => localStorage.removeItem(k));
   await pullUserData();
   setBtnLoading("#btn-login", false);
   maybeOfferBiometric();
@@ -149,24 +151,28 @@ async function authLogout(){
 
 /* ---------------- SINCRONIZACIÓN DE DATOS ---------------- */
 async function currentUser(){
+  try { const { data } = await sb.auth.getSession(); if (data && data.session && data.session.user) return data.session.user; } catch(e){}
   try { const { data } = await sb.auth.getUser(); return data.user; } catch(e){ return null; }
 }
 
 async function pullUserData(){
   if (!sb) return;
   const u = await currentUser(); if (!u) return;
-  // El cloud es la fuente de verdad de la cuenta: limpiamos lo local antes de cargar,
-  // así nunca se mezclan datos entre usuarios del mismo dispositivo.
-  SYNC_KEYS.forEach(k => localStorage.removeItem(k));
   try {
-    const { data } = await sb.from("profiles").select("data").eq("id", u.id).single();
-    if (data && data.data){
-      Object.keys(data.data).forEach(k => {
+    const { data } = await sb.from("profiles").select("data").eq("id", u.id).maybeSingle();
+    const cloud = (data && data.data) ? data.data : {};
+    if (cloud && cloud.ff_profile){
+      // La nube tiene datos de la cuenta -> es la fuente de verdad: reemplazamos lo local
+      SYNC_KEYS.forEach(k => localStorage.removeItem(k));
+      Object.keys(cloud).forEach(k => {
         if (SYNC_KEYS.includes(k)){
-          const v = data.data[k];
+          const v = cloud[k];
           localStorage.setItem(k, typeof v === "string" ? v : JSON.stringify(v));
         }
       });
+    } else {
+      // La nube está vacía -> NO borramos nada; subimos lo local (backfill) para no perder datos
+      await pushUserData();
     }
   } catch(e){}
 }
