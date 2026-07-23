@@ -1120,13 +1120,14 @@ function logWeight(){
    PANTALLA: ENCUESTA / FEEDBACK
    ========================================================= */
 const ENCUESTA = [
-  { id:"nps",        type:"nps",   q:"¿Qué tan probable es que le recomiendes Fac Fit a un amigo/a?", sub:"0 = nada · 10 = totalmente" },
+  { id:"recomienda", type:"score", q:"¿Qué tan probable es que le recomiendes Fac Fit a un amigo/a?", sub:"1 = nada · 5 = totalmente" },
   { id:"facilidad",  type:"score", q:"¿Qué tan fácil te resulta usar la app?" },
   { id:"rutinas",    type:"score", q:"¿Qué tan buenas te parecen las rutinas que te propone?" },
   { id:"ejercicios", type:"score", q:"¿Las imágenes y explicaciones de los ejercicios te resultan útiles?" },
   { id:"progreso",   type:"score", q:"¿Qué tan claro te resulta seguir tu progreso (métricas, racha, logros)?" },
   { id:"frecuencia", type:"choice", q:"¿Con qué frecuencia entrenás usando la app?", opciones:["Casi todos los días","3 a 5 por semana","1 a 2 por semana","Casi nunca"] },
   { id:"largo",      type:"choice", q:"¿La usarías a largo plazo?", opciones:["Sí, seguro","Tal vez","No"] },
+  { id:"pago",       type:"choice", q:"¿Cuánto estarías dispuesto/a a pagar por mes por Fac Fit?", opciones:["No pagaría","1 USD","3 USD","5 USD"] },
   { id:"gusta",      type:"text",  q:"¿Qué es lo que MÁS te gusta de la app?", ph:"Escribí lo que quieras…" },
   { id:"cambiar",    type:"text",  q:"¿Qué le cambiarías o le agregarías?", ph:"Ideas, mejoras, lo que sea…" },
   { id:"problema",   type:"text",  q:"¿Tuviste algún error o problema? ¿Cuál?", ph:"Contanos si algo falló…" },
@@ -1141,7 +1142,7 @@ function renderEncuesta(){
     <div class="card">
       <div class="section-title" style="margin-top:0;">Tu opinión nos importa 💬</div>
       <p style="font-size:13.5px; color:var(--gris-600); margin:0; line-height:1.5;">
-        Son 10 preguntas rápidas sobre la app. Tus respuestas nos ayudan a mejorarla.
+        Son ${ENCUESTA.length} preguntas rápidas sobre la app. Tus respuestas nos ayudan a mejorarla.
         ${yaEnviada ? "<br><b>Ya respondiste antes — ¡gracias! Podés volver a enviar si querés.</b>" : ""}
       </p>
     </div>`;
@@ -1160,7 +1161,7 @@ function renderEncuesta(){
     }
     html += `
       <div class="card enc-q">
-        <div class="enc-qnum">${i+1} de 10</div>
+        <div class="enc-qnum">${i+1} de ${ENCUESTA.length}</div>
         <div class="enc-qtext">${p.q}</div>
         ${p.sub ? `<div class="enc-qsub">${p.sub}</div>` : ""}
         ${control}
