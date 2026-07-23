@@ -40,6 +40,8 @@ async function authBoot(){
   // Sin sesión: si tiene Face ID configurado, vamos al login con esa opción
   if (biometricEnrolled()){ showScreen("#screen-login"); refreshBiometricUI(); }
   else showScreen("#screen-auth");
+  // Visitante nuevo (no instalada): mostramos las instrucciones de instalación
+  if (typeof showInstallInstructions === "function") setTimeout(() => showInstallInstructions(true), 500);
 }
 
 /* Ya autenticado: si completó el onboarding va al home, si no lo arranca */
@@ -48,6 +50,7 @@ async function afterAuth(){
   const p = State.profile();
   if (p && p.onboardDone){ renderHome(); showScreen("#screen-main"); }
   else { resetOnb(); showScreen("#screen-onb-name"); }
+  if (typeof showInstallInstructions === "function") setTimeout(() => showInstallInstructions(true), 800);
 }
 
 /* Garantiza que el email de la cuenta quede guardado en el perfil local */

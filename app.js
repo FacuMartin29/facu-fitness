@@ -1766,7 +1766,7 @@ window.addEventListener("appinstalled", () => { deferredInstall = null; closeIns
    auto=true -> solo la primera vez (visitante nuevo no instalado) */
 function showInstallInstructions(auto){
   if (isStandaloneApp()) return;                       // ya la tiene instalada
-  if (auto && localStorage.getItem("ff_installSeen")) return;
+  if (auto && sessionStorage.getItem("ff_installSeen")) return;  // una vez por sesión
   const ov = document.getElementById("install-overlay");
   const card = document.getElementById("install-card");
   if (!ov || !card) return;
@@ -1804,7 +1804,7 @@ function showInstallInstructions(auto){
     <div class="ins-steps">${cuerpo}</div>
     <button class="btn btn-ghost" onclick="closeInstall()">Seguir en el navegador</button>`;
   ov.style.display = "flex";
-  try { localStorage.setItem("ff_installSeen", "1"); } catch(e){}
+  try { sessionStorage.setItem("ff_installSeen", "1"); } catch(e){}
 }
 async function doInstall(){
   if (!deferredInstall) return;
@@ -1840,5 +1840,4 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#burger-btn").onclick = openMenu;
   $("#menu-overlay").onclick = (e) => { if (e.target.id === "menu-overlay") closeMenu(); };
   $("#modal-overlay").onclick = (e) => { if (e.target.id === "modal-overlay") closeModal(); };
-  setTimeout(() => showInstallInstructions(true), 4200);   // tras el splash, si no está instalada
 });
