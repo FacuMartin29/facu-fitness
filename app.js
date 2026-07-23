@@ -347,7 +347,7 @@ function initials(name, last){
 }
 
 /* ---------- ONBOARDING STATE (temporal, hasta guardar) ---------- */
-const onb = { nombre:"", apellido:"", cumple:"", edad:"", peso:"", altura:"", dias:[] };
+const onb = { nombre:"", apellido:"", cumple:"", genero:"masculino", edad:"", peso:"", altura:"", dias:[] };
 
 function initApp(){
   const splash = $("#screen-splash");
@@ -374,6 +374,7 @@ function onbDatosNext(){
   if (!edad || !peso || !altura){ toast("Completá edad, peso y altura para continuar"); return; }
   onb.edad = edad; onb.peso = peso; onb.altura = altura;
   onb.cumple = $("#inp-cumple").value || "";
+  onb.genero = $("#inp-genero").value || "masculino";
   showScreen("#screen-onb-dias");
   renderOnbDayChips($("#onb-day-grid"), onb.dias, toggleOnbDay);
 }
@@ -410,13 +411,15 @@ function onbFinish(){
     ...existing,
     nombre: onb.nombre, apellido: onb.apellido || existing.apellido || "",
     cumple: onb.cumple || existing.cumple || "",
+    genero: onb.genero || existing.genero || "masculino",
     edad: onb.edad, peso: onb.peso, altura: onb.altura,
     onboardDone: true,
   };
   State.saveProfile(profile);
   State.saveTrainingDays(onb.dias);
   State.saveWeightLog([{ date: todayStr(), peso: onb.peso }]);
-  toast(`¡Bienvenido, ${profile.nombre}! Tu rutina ya está lista 💪`);
+  const saludo = profile.genero === "femenino" ? "¡Bienvenida" : (profile.genero === "no_dice" ? "¡Hola" : "¡Bienvenido");
+  toast(`${saludo}, ${profile.nombre}! Tu rutina ya está lista 💪`);
   if (typeof maybeOfferBiometric === "function") maybeOfferBiometric();
   else { renderHome(); showScreen("#screen-main"); }
 }
@@ -950,6 +953,13 @@ function renderDatos(){
       <div class="field"><label>Apellido</label><input id="d-apellido" value="${p.apellido||""}"></div>
       <div class="field"><label>Correo electrónico</label><input id="d-email" type="email" autocapitalize="off" autocomplete="email" placeholder="tucorreo@ejemplo.com" value="${p.email||""}"></div>
       <div class="field"><label>Fecha de cumpleaños</label><input id="d-cumple" type="date" value="${p.cumple||""}"></div>
+      <div class="field"><label>Género</label>
+        <select id="d-genero">
+          <option value="masculino" ${(p.genero||"masculino")==="masculino"?"selected":""}>Masculino</option>
+          <option value="femenino" ${p.genero==="femenino"?"selected":""}>Femenino</option>
+          <option value="no_dice" ${p.genero==="no_dice"?"selected":""}>Prefiero no decirlo</option>
+        </select>
+      </div>
       <div class="field-row">
         <div class="field"><label>Edad</label><input id="d-edad" type="number" value="${p.edad||""}"></div>
         <div class="field"><label>Peso (kg)</label><input id="d-peso" type="number" step="0.1" value="${p.peso||""}"></div>
@@ -1084,6 +1094,7 @@ function saveDatos(){
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast("Revisá el correo, no parece válido 📧"); return; }
   p.email = email;
   p.cumple = $("#d-cumple").value || "";
+  p.genero = $("#d-genero").value || p.genero || "masculino";
   p.edad = +$("#d-edad").value || p.edad;
   p.peso = +$("#d-peso").value || p.peso;
   p.altura = +$("#d-altura").value || p.altura;
