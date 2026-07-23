@@ -137,8 +137,19 @@ async function authLogin(){
   maybeOfferBiometric();
 }
 
-/* ---------------- LOGOUT ---------------- */
-async function authLogout(){
+/* ---------------- LOGOUT (con confirmación) ---------------- */
+function authLogout(){
+  $("#modal-body").innerHTML = `
+    <div class="modal-title">¿Cerrar sesión?</div>
+    <div class="modal-desc">Vas a tener que volver a iniciar sesión para entrar. Tranqui: tus datos quedan guardados en tu cuenta.</div>
+    <button class="btn btn-red" onclick="confirmLogout()">Sí, cerrar sesión</button>
+    <button class="btn btn-ghost" onclick="closeModal()">No, volver</button>
+  `;
+  $("#modal-overlay").classList.add("open");
+}
+
+async function confirmLogout(){
+  closeModal();
   // scope local: cierra la sesión en este dispositivo pero deja válido el
   // token para poder reentrar con Face ID (si está activado).
   try { if (sb) await sb.auth.signOut({ scope: "local" }); } catch(e){}

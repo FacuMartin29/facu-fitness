@@ -567,6 +567,7 @@ function renderHome(){
         </p>
       </div>`;
     html += buildUpcomingCard();
+    html += `<button class="btn btn-outline improve-btn" onclick="goTo('encuesta')">💬 ¡Quiero mejorar esta app!</button>`;
     c.innerHTML = html;
     return;
   }
@@ -662,6 +663,7 @@ function renderHome(){
   }
 
   html += buildUpcomingCard();
+  html += `<button class="btn btn-outline improve-btn" onclick="goTo('encuesta')">💬 ¡Quiero mejorar esta app!</button>`;
 
   c.innerHTML = html;
 }

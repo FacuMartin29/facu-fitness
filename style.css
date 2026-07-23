@@ -486,6 +486,7 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .logro-emoji{ font-size:30px; line-height:1; }
 .logro-label{ font-size:10px; font-weight:700; color:var(--gris-600); margin-top:4px; line-height:1.15; }
 .btn-share{ margin-bottom:16px; }
+.improve-btn{ margin-top:2px; }
 
 /* ===================== ENCUESTA ===================== */
 .enc-q{ padding:16px 18px; }
