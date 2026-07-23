@@ -210,6 +210,7 @@
       </div>
     </div>
     <div class="menu-nav" id="menu-nav"></div>
+    <button class="menu-share menu-install-btn" id="menu-install" onclick="showInstallInstructions(false)" style="display:none;">📥 Instalar app</button>
     <button class="menu-share" onclick="shareApp()">📲 Compartir Fac Fit</button>
     <button class="menu-logout" onclick="authLogout()">Cerrar sesión</button>
     <div class="menu-footer">Fac Fit · hecho con Claudio 🤖<br>Tu cuenta y tus datos se guardan en la nube.</div>
@@ -223,11 +224,9 @@
   <!-- ===================== TOAST ===================== -->
   <div class="toast" id="toast"></div>
 
-  <!-- ===================== BANNER INSTALAR ===================== -->
-  <div class="install-banner" id="install-banner" style="display:none;">
-    <button class="install-close" onclick="dismissInstall()" aria-label="Cerrar">✕</button>
-    <div class="install-text" id="install-text"></div>
-    <div class="install-actions" id="install-actions"></div>
+  <!-- ===================== OVERLAY INSTALAR ===================== -->
+  <div class="install-overlay" id="install-overlay" style="display:none;">
+    <div class="install-card" id="install-card"></div>
   </div>
 
 </div>

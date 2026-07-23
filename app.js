@@ -536,6 +536,8 @@ function buildMenu(){
     nav.appendChild(el);
   });
   buildBottomNav();
+  const mi = $("#menu-install");
+  if (mi) mi.style.display = (typeof isStandaloneApp === "function" && isStandaloneApp()) ? "none" : "block";
 }
 
 /* =========================================================
@@ -1751,37 +1753,72 @@ function svgBarWeeks(){
    ========================================================= */
 let deferredInstall = null;
 function isStandaloneApp(){ return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true; }
-function isIOSDevice(){ return /iphone|ipad|ipod/i.test(navigator.userAgent); }
 
-window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredInstall = e; maybeShowInstall(); });
-window.addEventListener("appinstalled", () => { deferredInstall = null; hideInstall(); });
+/* Íconos para las instrucciones */
+const SHARE_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0a84ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg>';
+const PLUS_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-4px;"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
+const DOTS_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="vertical-align:-4px;"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
 
-function maybeShowInstall(){
-  if (isStandaloneApp()) return;                       // ya está instalada
-  if (localStorage.getItem("ff_installDismissed")) return;
-  const banner = document.getElementById("install-banner");
-  const text = document.getElementById("install-text");
-  const actions = document.getElementById("install-actions");
-  if (!banner) return;
-  if (deferredInstall){                                // Android / Chrome
-    text.innerHTML = "📲 <b>Instalá Fac Fit</b> en tu teléfono, como una app.";
-    actions.innerHTML = `<button class="btn-install" onclick="doInstall()">Instalar</button>`;
-    banner.style.display = "flex";
-  } else if (isIOSDevice()){                            // iPhone (Safari): guía
-    text.innerHTML = "📲 <b>Instalá Fac Fit:</b> tocá <b>Compartir</b> ⬆️ y elegí <b>“Agregar a pantalla de inicio”</b>.";
-    actions.innerHTML = "";
-    banner.style.display = "flex";
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredInstall = e; });
+window.addEventListener("appinstalled", () => { deferredInstall = null; closeInstall(); });
+
+/* Muestra las instrucciones de instalación según el dispositivo.
+   auto=true -> solo la primera vez (visitante nuevo no instalado) */
+function showInstallInstructions(auto){
+  if (isStandaloneApp()) return;                       // ya la tiene instalada
+  if (auto && localStorage.getItem("ff_installSeen")) return;
+  const ov = document.getElementById("install-overlay");
+  const card = document.getElementById("install-card");
+  if (!ov || !card) return;
+
+  const ua = navigator.userAgent;
+  const iOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const iOSOtroNavegador = iOS && /(CriOS|FxiOS|EdgiOS|OPiOS)/i.test(ua);
+  const android = /android/i.test(ua);
+  let cuerpo = "";
+
+  if (iOSOtroNavegador){
+    cuerpo = `
+      <div class="ins-note">Para instalarla en el iPhone tenés que abrir este link en <b>Safari</b> (este navegador no lo permite).</div>
+      <button class="btn btn-primary" onclick="copyAppLink()">Copiar link y abrir en Safari</button>`;
+  } else if (iOS){
+    cuerpo = `
+      <div class="ins-step"><span class="ins-num">1</span><div>Tocá el botón <b>Compartir</b> ${SHARE_ICON} en la barra de abajo de Safari.</div></div>
+      <div class="ins-step"><span class="ins-num">2</span><div>Deslizá hacia abajo y tocá <b>“Agregar a inicio”</b> ${PLUS_ICON}.</div></div>
+      <div class="ins-step"><span class="ins-num">3</span><div>Tocá <b>“Agregar”</b> arriba a la derecha. ¡Listo! 🎉</div></div>`;
+  } else if (android){
+    cuerpo = `
+      ${deferredInstall ? `<button class="btn btn-primary" onclick="doInstall()">📲 Instalar Fac Fit</button><div class="ins-or">— o a mano —</div>` : ""}
+      <div class="ins-step"><span class="ins-num">1</span><div>Tocá el <b>menú</b> ${DOTS_ICON} (arriba a la derecha).</div></div>
+      <div class="ins-step"><span class="ins-num">2</span><div>Elegí <b>“Instalar aplicación”</b> o <b>“Agregar a la pantalla principal”</b>.</div></div>`;
+  } else {
+    cuerpo = deferredInstall
+      ? `<button class="btn btn-primary" onclick="doInstall()">Instalar Fac Fit</button>`
+      : `<div class="ins-note">Abrí este link desde tu <b>teléfono</b> para instalar la app en la pantalla de inicio.</div>`;
   }
+
+  card.innerHTML = `
+    <div class="ins-brand">FAC <span>FIT</span></div>
+    <div class="ins-title">Sumá Fac Fit a tu teléfono</div>
+    <div class="ins-sub">Instalala como una app de verdad: entra directo, anda offline y se ve a pantalla completa.</div>
+    <div class="ins-steps">${cuerpo}</div>
+    <button class="btn btn-ghost" onclick="closeInstall()">Seguir en el navegador</button>`;
+  ov.style.display = "flex";
+  try { localStorage.setItem("ff_installSeen", "1"); } catch(e){}
 }
 async function doInstall(){
   if (!deferredInstall) return;
   deferredInstall.prompt();
   try { await deferredInstall.userChoice; } catch(e){}
   deferredInstall = null;
-  hideInstall();
+  closeInstall();
 }
-function dismissInstall(){ try { localStorage.setItem("ff_installDismissed", "1"); } catch(e){} hideInstall(); }
-function hideInstall(){ const b = document.getElementById("install-banner"); if (b) b.style.display = "none"; }
+function closeInstall(){ const ov = document.getElementById("install-overlay"); if (ov) ov.style.display = "none"; }
+function copyAppLink(){
+  const url = location.origin + location.pathname;
+  if (navigator.clipboard){ navigator.clipboard.writeText(url).then(()=>toast("Link copiado 📋 Pegalo en Safari")).catch(()=>toast(url)); }
+  else toast(url);
+}
 
 async function shareApp(){
   const url = location.origin + location.pathname;
@@ -1803,5 +1840,5 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#burger-btn").onclick = openMenu;
   $("#menu-overlay").onclick = (e) => { if (e.target.id === "menu-overlay") closeMenu(); };
   $("#modal-overlay").onclick = (e) => { if (e.target.id === "modal-overlay") closeModal(); };
-  setTimeout(maybeShowInstall, 4200);   // tras el splash, si no está instalada
+  setTimeout(() => showInstallInstructions(true), 4200);   // tras el splash, si no está instalada
 });

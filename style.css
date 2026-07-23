@@ -489,20 +489,25 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .improve-btn{ margin-top:2px; }
 
 /* ===================== INSTALAR / COMPARTIR ===================== */
-.install-banner{
-  position:fixed; bottom:0; left:50%; transform:translateX(-50%);
-  width:100%; max-width:480px; z-index:70;
-  display:flex; align-items:center; gap:12px;
-  background:#0d0d0f; color:#fff; border-top:2px solid var(--rojo);
-  padding:16px 16px calc(16px + env(safe-area-inset-bottom));
-  box-shadow:0 -4px 22px rgba(0,0,0,.4);
-  animation: slideUp .3s ease;
+.install-overlay{
+  position:fixed; inset:0; z-index:80; display:flex; align-items:flex-end; justify-content:center;
+  background:rgba(0,0,0,.6); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
 }
-.install-text{ flex:1; font-size:13px; line-height:1.45; padding-right:8px; }
-.install-text b{ color:#fff; }
-.btn-install{ background:var(--rojo); color:#fff; border:none; border-radius:999px; padding:11px 20px; font-weight:800; font-size:14px; cursor:pointer; white-space:nowrap; }
-.btn-install:active{ transform:scale(.97); }
-.install-close{ position:absolute; top:5px; right:8px; background:none; border:none; color:var(--gris-400); font-size:15px; cursor:pointer; padding:4px 6px; }
+.install-card{
+  width:100%; max-width:480px; background:var(--surface); color:var(--text);
+  border-radius:22px 22px 0 0; padding:26px 22px calc(24px + env(safe-area-inset-bottom));
+  animation: slideUp .32s cubic-bezier(.2,.9,.3,1); text-align:center; max-height:92vh; overflow-y:auto;
+}
+.ins-brand{ font-family:'Bangers', var(--font-display); font-size:34px; letter-spacing:1.5px; margin-bottom:8px; }
+.ins-brand span{ color:var(--rojo); }
+.ins-title{ font-size:20px; font-weight:800; }
+.ins-sub{ font-size:13.5px; color:var(--gris-600); line-height:1.5; margin:6px 0 18px; }
+.ins-steps{ text-align:left; margin-bottom:12px; }
+.ins-step{ display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid var(--gris-100); font-size:14.5px; line-height:1.45; }
+.ins-step:last-child{ border-bottom:none; }
+.ins-num{ flex-shrink:0; width:26px; height:26px; border-radius:50%; background:var(--rojo); color:#fff; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; }
+.ins-or{ text-align:center; font-size:12px; color:var(--gris-400); font-weight:700; margin:12px 0; }
+.ins-note{ font-size:14px; color:var(--text); line-height:1.5; margin-bottom:16px; background:var(--gris-100); padding:12px 14px; border-radius:12px; }
 
 .menu-share{
   margin-top:8px; width:100%; padding:13px; border-radius:12px; border:none;
