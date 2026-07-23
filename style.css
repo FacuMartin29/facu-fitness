@@ -488,6 +488,29 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .btn-share{ margin-bottom:16px; }
 .improve-btn{ margin-top:2px; }
 
+/* ===================== INSTALAR / COMPARTIR ===================== */
+.install-banner{
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+  width:100%; max-width:480px; z-index:70;
+  display:flex; align-items:center; gap:12px;
+  background:#0d0d0f; color:#fff; border-top:2px solid var(--rojo);
+  padding:16px 16px calc(16px + env(safe-area-inset-bottom));
+  box-shadow:0 -4px 22px rgba(0,0,0,.4);
+  animation: slideUp .3s ease;
+}
+.install-text{ flex:1; font-size:13px; line-height:1.45; padding-right:8px; }
+.install-text b{ color:#fff; }
+.btn-install{ background:var(--rojo); color:#fff; border:none; border-radius:999px; padding:11px 20px; font-weight:800; font-size:14px; cursor:pointer; white-space:nowrap; }
+.btn-install:active{ transform:scale(.97); }
+.install-close{ position:absolute; top:5px; right:8px; background:none; border:none; color:var(--gris-400); font-size:15px; cursor:pointer; padding:4px 6px; }
+
+.menu-share{
+  margin-top:8px; width:100%; padding:13px; border-radius:12px; border:none;
+  background:var(--rojo); color:#fff; font-weight:800; font-size:14px; cursor:pointer;
+  transition:transform .1s;
+}
+.menu-share:active{ transform:scale(.98); }
+
 /* ===================== ENCUESTA ===================== */
 .enc-q{ padding:16px 18px; }
 .enc-qnum{ font-size:10.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--rojo); margin-bottom:6px; }

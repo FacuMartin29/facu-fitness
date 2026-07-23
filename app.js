@@ -1747,6 +1747,55 @@ function svgBarWeeks(){
 }
 
 /* =========================================================
+   INSTALAR / COMPARTIR LA APP
+   ========================================================= */
+let deferredInstall = null;
+function isStandaloneApp(){ return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true; }
+function isIOSDevice(){ return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredInstall = e; maybeShowInstall(); });
+window.addEventListener("appinstalled", () => { deferredInstall = null; hideInstall(); });
+
+function maybeShowInstall(){
+  if (isStandaloneApp()) return;                       // ya está instalada
+  if (localStorage.getItem("ff_installDismissed")) return;
+  const banner = document.getElementById("install-banner");
+  const text = document.getElementById("install-text");
+  const actions = document.getElementById("install-actions");
+  if (!banner) return;
+  if (deferredInstall){                                // Android / Chrome
+    text.innerHTML = "📲 <b>Instalá Fac Fit</b> en tu teléfono, como una app.";
+    actions.innerHTML = `<button class="btn-install" onclick="doInstall()">Instalar</button>`;
+    banner.style.display = "flex";
+  } else if (isIOSDevice()){                            // iPhone (Safari): guía
+    text.innerHTML = "📲 <b>Instalá Fac Fit:</b> tocá <b>Compartir</b> ⬆️ y elegí <b>“Agregar a pantalla de inicio”</b>.";
+    actions.innerHTML = "";
+    banner.style.display = "flex";
+  }
+}
+async function doInstall(){
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  try { await deferredInstall.userChoice; } catch(e){}
+  deferredInstall = null;
+  hideInstall();
+}
+function dismissInstall(){ try { localStorage.setItem("ff_installDismissed", "1"); } catch(e){} hideInstall(); }
+function hideInstall(){ const b = document.getElementById("install-banner"); if (b) b.style.display = "none"; }
+
+async function shareApp(){
+  const url = location.origin + location.pathname;
+  const data = { title: "Fac Fit", text: "Te comparto Fac Fit, la app para organizar tus entrenamientos 💪🔥", url };
+  if (navigator.share){
+    try { await navigator.share(data); } catch(e){}
+  } else {
+    try { await navigator.clipboard.writeText(url); toast("Link copiado 📋 Pegalo donde quieras"); }
+    catch(e){ toast(url); }
+  }
+  if (window.closeMenu) closeMenu();
+}
+
+/* =========================================================
    INIT
    ========================================================= */
 document.addEventListener("DOMContentLoaded", () => {
@@ -1754,4 +1803,5 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#burger-btn").onclick = openMenu;
   $("#menu-overlay").onclick = (e) => { if (e.target.id === "menu-overlay") closeMenu(); };
   $("#modal-overlay").onclick = (e) => { if (e.target.id === "modal-overlay") closeModal(); };
+  setTimeout(maybeShowInstall, 4200);   // tras el splash, si no está instalada
 });
