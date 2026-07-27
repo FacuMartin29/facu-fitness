@@ -120,7 +120,9 @@ html.ff-boot, html.ff-boot body, html.ff-boot #app{ background:#000 !important; 
   width: 100%; height:auto; display:block;
   transform: scale(1.08);   /* leve zoom para comer los bordes de los costados */
   transform-origin: center center;
-  animation: pop .7s cubic-bezier(.2,1.4,.4,1) both;
+  /* Sin 'forwards': al terminar el pop vuelve al transform declarado (scale 1.08),
+     así la regla .zoom del final puede agrandar el logo (scale 1.75) */
+  animation: pop .7s cubic-bezier(.2,1.4,.4,1);
   transition: transform .6s cubic-bezier(.3,0,.15,1), opacity .55s ease;
 }
 @keyframes pop{ from{opacity:0; transform:scale(.9);} to{opacity:1; transform:scale(1.08);} }
