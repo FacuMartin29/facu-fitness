@@ -442,6 +442,29 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .nudge-sub{ font-size:12.5px; color:var(--gris-600); line-height:1.4; margin-top:2px; }
 .nudge-arrow{ font-size:24px; color:var(--gris-400); flex:0 0 auto; }
 
+/* ===================== NUTRICIÓN ===================== */
+.nutri-hero{ text-align:center; background:linear-gradient(135deg, var(--rojo) 0%, #b02020 100%); border:none; }
+.nutri-goal-label{ font-size:12.5px; font-weight:800; color:rgba(255,255,255,.85); text-transform:uppercase; letter-spacing:.5px; }
+.nutri-kcal{ font-size:46px; font-weight:900; color:#fff; line-height:1.05; margin:4px 0 2px; }
+.nutri-kcal span{ font-size:18px; font-weight:800; margin-left:6px; color:rgba(255,255,255,.9); }
+.nutri-goal-sub{ font-size:13px; font-weight:700; color:rgba(255,255,255,.9); }
+.macro-row{ margin-bottom:14px; }
+.macro-row:last-of-type{ margin-bottom:0; }
+.macro-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; }
+.macro-name{ font-size:14px; font-weight:800; color:var(--text); }
+.macro-g{ font-size:14px; font-weight:800; color:var(--text); }
+.macro-kcal{ font-size:12px; font-weight:600; color:var(--gris-400); }
+.macro-bar{ height:10px; border-radius:999px; background:var(--gris-100); overflow:hidden; }
+.macro-fill{ height:100%; border-radius:999px; transition:width .4s; }
+.nutri-tip{ display:flex; gap:10px; align-items:flex-start; font-size:13.5px; line-height:1.5; color:var(--gris-800); }
+.nutri-tip-emoji{ font-size:20px; flex:0 0 auto; }
+.nutri-calc-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--gris-100); font-size:13.5px; color:var(--gris-600); }
+.nutri-calc-row b{ color:var(--text); }
+.nutri-calc-row:last-child{ border-bottom:none; }
+.nutri-calc-row.total{ font-size:15px; }
+.nutri-calc-row.total span{ font-weight:800; color:var(--text); }
+.nutri-calc-row.total b{ color:var(--rojo); font-size:16px; }
+
 /* ===================== VER OTRO DÍA (tira) ===================== */
 .upstrip{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin:0 -2px; scroll-snap-type:x proximity; }
 .upstrip::-webkit-scrollbar{ display:none; }
