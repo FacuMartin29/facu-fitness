@@ -118,6 +118,14 @@ const State = {
   swaps(){ return Store.get("ff_swaps", {}); },
   saveSwaps(obj){ Store.set("ff_swaps", obj); },
 
+  /* Registro de cargas por ejercicio: { exId: [{ d, kg, reps }] } */
+  lifts(){ return Store.get("ff_lifts", {}); },
+  saveLifts(obj){ Store.set("ff_lifts", obj); },
+
+  /* Medidas corporales: [{ date, cintura, cadera, pecho, brazo, muslo, ... }] */
+  measures(){ return Store.get("ff_measures", []); },
+  saveMeasures(arr){ Store.set("ff_measures", arr); },
+
   weightLog(){ return Store.get("ff_weightLog", []); },
   saveWeightLog(arr){ Store.set("ff_weightLog", arr); },
 };
@@ -832,6 +840,77 @@ function findExerciseById(id){
   return null;
 }
 
+/* =========================================================
+   REGISTRO DE CARGAS Y RÉCORDS (PRs)
+   ========================================================= */
+const GRUPO_LABEL = {
+  pecho:"Pecho", espalda:"Espalda", hombros:"Hombros", biceps:"Bíceps",
+  triceps:"Tríceps", piernas:"Piernas", core:"Core",
+  cardio:"Cardio", cardio_circuit:"Circuito",
+};
+function liftPR(exId){ return (State.lifts()[exId]||[]).reduce((m,e)=>Math.max(m, e.kg||0), 0); }
+function lastLift(exId){ const a = State.lifts()[exId]||[]; return a.length ? a[a.length-1] : null; }
+
+function liftSectionHTML(exId, date){
+  const pr = liftPR(exId);
+  const last = lastLift(exId);
+  return `
+    <div class="lift-box">
+      <div class="lift-head">
+        <div class="section-title" style="margin:0;">Tu registro de peso</div>
+        ${pr > 0 ? `<span class="lift-pr">🏆 ${pr} kg</span>` : ""}
+      </div>
+      <div class="lift-last">${last
+        ? `Última: <b>${last.kg} kg</b>${last.reps ? ` × ${last.reps}` : ""} · ${fmtShort(last.d)}`
+        : `Registrá cuánto levantaste para ver tu progreso.`}</div>
+      <div class="lift-inputs">
+        <input id="lift-kg" type="number" inputmode="decimal" step="0.5" placeholder="Peso (kg)">
+        <input id="lift-reps" type="number" inputmode="numeric" placeholder="Reps">
+        <button class="btn-lift" onclick="logLift('${exId}','${date||todayStr()}')">Guardar</button>
+      </div>
+    </div>`;
+}
+function logLift(exId, date){
+  const kg = parseFloat($("#lift-kg").value);
+  if (!kg || kg <= 0){ toast("Poné el peso en kg 🏋️"); return; }
+  const reps = parseInt($("#lift-reps").value) || null;
+  const prev = liftPR(exId);
+  const lifts = State.lifts();
+  if (!lifts[exId]) lifts[exId] = [];
+  lifts[exId].push({ d: date || todayStr(), kg, reps });
+  State.saveLifts(lifts);
+  if (kg > prev && prev > 0) toast(`¡Nuevo récord! 🎉 ${kg} kg`);
+  else toast("Registro guardado 💪");
+  const sec = $("#lift-section");
+  if (sec) sec.innerHTML = liftSectionHTML(exId, date);
+}
+
+/* Récord máximo por grupo muscular (para Métricas) */
+function computePRsByGroup(){
+  const lifts = State.lifts(); const byGroup = {};
+  Object.keys(lifts).forEach(exId => {
+    const ex = findExerciseById(exId); if (!ex) return;
+    const max = Math.max(...lifts[exId].map(e => e.kg || 0));
+    if (max <= 0) return;
+    if (!byGroup[ex.grupo] || max > byGroup[ex.grupo].kg) byGroup[ex.grupo] = { kg: max, name: ex.name };
+  });
+  return byGroup;
+}
+function buildPRCard(){
+  const prs = computePRsByGroup();
+  const keys = Object.keys(prs);
+  if (!keys.length) return "";
+  const orden = ["pecho","espalda","hombros","biceps","triceps","piernas","core"];
+  keys.sort((a,b)=> orden.indexOf(a) - orden.indexOf(b));
+  const rows = keys.map(g => `
+    <div class="pr-row">
+      <span class="pr-group" style="color:${(typeof GRUPO_COLOR!=="undefined" && GRUPO_COLOR[g]) || "var(--rojo)"}">${GRUPO_LABEL[g]||g}</span>
+      <span class="pr-detail">${prs[g].name}</span>
+      <span class="pr-kg">${prs[g].kg} kg</span>
+    </div>`).join("");
+  return `<div class="card"><div class="section-title" style="margin-top:0;">🏆 Récords por músculo</div>${rows}</div>`;
+}
+
 /* Traducción de músculos (free-exercise-db usa nombres en inglés) */
 const MUSCULO_ES = {
   chest:"Pecho", shoulders:"Hombros", triceps:"Tríceps", biceps:"Bíceps",
@@ -881,6 +960,7 @@ function openExerciseDetail(id, date, back, slotId){
       <span class="exercise-sr">${ex.reps} reps x ${ex.sets} series</span>
     </div>
     <div class="modal-desc" style="margin-bottom:12px;">${cue}</div>
+    ${(ex.grupo !== "cardio" && ex.grupo !== "cardio_circuit") ? `<div id="lift-section">${liftSectionHTML(id, date)}</div>` : ""}
     ${canSwap ? `<button class="btn btn-outline" style="margin-bottom:10px;" onclick="openSwapPicker('${slotId}','${ex.grupo}','${date}','${back||""}')">🔁 Cambiar por otro ejercicio</button>` : ""}
     ${backDate
       ? `<button class="btn btn-ghost" onclick="openDayPreview('${backDate}')">‹ Volver a la rutina</button>`
@@ -1048,7 +1128,7 @@ function saveObjetivoNivel(){
 }
 
 /* ---------- BACKUP: exportar / importar ---------- */
-const BACKUP_KEYS = ["ff_profile","ff_trainingDays","ff_attendance","ff_makeups","ff_routineTypeLog","ff_focus","ff_swaps","ff_weightLog"];
+const BACKUP_KEYS = ["ff_profile","ff_trainingDays","ff_attendance","ff_makeups","ff_routineTypeLog","ff_focus","ff_swaps","ff_weightLog","ff_lifts","ff_measures"];
 function exportData(){
   const data = { app:"fac-fit", version:1, exportedAt:new Date().toISOString(), data:{} };
   BACKUP_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v != null) data.data[k] = v; });
@@ -1671,6 +1751,8 @@ function renderMetricas(){
     </div>
 
     ${buildLogrosCard()}
+
+    ${buildPRCard()}
 
     <div class="card">
       <div class="section-title" style="margin-top:0;">Índice de Masa Corporal</div>

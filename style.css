@@ -378,6 +378,37 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 }
 .musc-tag.primary{ background:var(--rojo-suave); color:var(--rojo-oscuro); }
 
+/* ===================== REGISTRO DE CARGAS (PRs) ===================== */
+.lift-box{
+  background:var(--gris-100); border-radius:16px; padding:12px 14px; margin-bottom:12px;
+}
+.lift-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.lift-pr{
+  font-size:12.5px; font-weight:800; color:var(--rojo-oscuro); background:var(--rojo-suave);
+  padding:3px 10px; border-radius:999px; white-space:nowrap;
+}
+.lift-last{ font-size:12.5px; color:var(--gris-600); margin:6px 0 10px; }
+.lift-inputs{ display:flex; gap:8px; }
+.lift-inputs input{
+  flex:1; min-width:0; padding:11px 12px; border:1.5px solid var(--gris-200);
+  border-radius:12px; font-size:15px; background:var(--surface); color:var(--text);
+}
+.lift-inputs input:focus{ outline:none; border-color:var(--rojo); }
+.btn-lift{
+  flex:0 0 auto; padding:11px 18px; border:none; border-radius:12px; cursor:pointer;
+  background:var(--rojo); color:#fff; font-size:14px; font-weight:800;
+  transition: transform .12s;
+}
+.btn-lift:active{ transform:scale(.94); }
+.pr-row{
+  display:flex; align-items:center; gap:8px; padding:10px 0;
+  border-bottom:1px solid var(--gris-100);
+}
+.pr-row:last-child{ border-bottom:none; }
+.pr-group{ font-size:14px; font-weight:800; flex:0 0 86px; }
+.pr-detail{ font-size:12.5px; color:var(--gris-600); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pr-kg{ font-size:15px; font-weight:800; color:var(--text); white-space:nowrap; }
+
 /* ===================== VER OTRO DÍA (tira) ===================== */
 .upstrip{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin:0 -2px; scroll-snap-type:x proximity; }
 .upstrip::-webkit-scrollbar{ display:none; }
