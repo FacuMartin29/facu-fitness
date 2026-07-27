@@ -441,6 +441,7 @@ const MENU_ITEMS = [
   { id: "datos", label: "Datos personales", icon: "user" },
   { id: "dias", label: "Días de rutina", icon: "calendar" },
   { id: "asistencias", label: "Asistencias", icon: "check" },
+  { id: "medidas", label: "Medidas corporales", icon: "ruler" },
   { id: "metricas", label: "Métricas", icon: "chart" },
   { id: "encuesta", label: "Tu opinión", icon: "chat" },
 ];
@@ -454,6 +455,7 @@ const ICONS = {
   dumbbell: '<path d="M6.5 6.5l11 11"/><path d="M3 8l2-2 3 3-2 2z"/><path d="M16 19l2-2 3-3-2-2-3 3z" transform="translate(-1,-1)"/><path d="M2 12l2 2M20 10l2 2"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  ruler: '<rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v3M11 7v4M15 7v3M19 7v4"/>',
 };
 function svgIcon(name, extra=""){
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${ICONS[name]||""}</svg>`;
@@ -478,6 +480,7 @@ function goTo(tabId){
   if (tabId === "datos") renderDatos();
   if (tabId === "dias") renderDias();
   if (tabId === "asistencias") renderAsistencias();
+  if (tabId === "medidas") renderMedidas();
   if (tabId === "metricas") renderMetricas();
   if (tabId === "encuesta") renderEncuesta();
   $$(".tab-content").forEach(el => el.style.display = "none");
@@ -580,6 +583,7 @@ function renderHome(){
         </p>
       </div>`;
     html += buildUpcomingCard();
+    html += buildMeasuresNudge();
     html += `<button class="btn btn-outline improve-btn" onclick="goTo('encuesta')">💬 ¡Quiero mejorar esta app!</button>`;
     c.innerHTML = html;
     return;
@@ -676,6 +680,7 @@ function renderHome(){
   }
 
   html += buildUpcomingCard();
+  html += buildMeasuresNudge();
   html += `<button class="btn btn-outline improve-btn" onclick="goTo('encuesta')">💬 ¡Quiero mejorar esta app!</button>`;
 
   c.innerHTML = html;
@@ -1196,6 +1201,172 @@ function logWeight(){
   const p = State.profile(); p.peso = val; State.saveProfile(p);
   toast("Registro de peso guardado 📉");
   renderDatos();
+}
+
+/* =========================================================
+   PANTALLA: MEDIDAS CORPORALES
+   Registro histórico de circunferencias + peso, con evolución.
+   ========================================================= */
+const MEDIDAS_CAMPOS = [
+  { key:"peso",        label:"Peso",        unit:"kg", emoji:"⚖️", menos:true  },
+  { key:"cintura",     label:"Cintura",     unit:"cm", emoji:"📏", menos:true  },
+  { key:"cadera",      label:"Cadera",      unit:"cm", emoji:"📏", menos:true  },
+  { key:"pecho",       label:"Pecho",       unit:"cm", emoji:"🫁", menos:false },
+  { key:"brazo",       label:"Brazo",       unit:"cm", emoji:"💪", menos:false },
+  { key:"muslo",       label:"Muslo",       unit:"cm", emoji:"🦵", menos:false },
+  { key:"pantorrilla", label:"Pantorrilla", unit:"cm", emoji:"🦵", menos:false },
+  { key:"cuello",      label:"Cuello",      unit:"cm", emoji:"📏", menos:false },
+];
+
+/* Última entrada que tiene valor para ese campo, y la anterior a esa */
+function medUltima(arr, key){
+  for (let i = arr.length - 1; i >= 0; i--) if (arr[i][key] != null) return arr[i];
+  return null;
+}
+function medPrevia(arr, key){
+  let visto = false;
+  for (let i = arr.length - 1; i >= 0; i--){
+    if (arr[i][key] != null){
+      if (visto) return arr[i];
+      visto = true;
+    }
+  }
+  return null;
+}
+
+function renderMedidas(){
+  const arr = State.measures().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const c = $("#tab-medidas");
+  const hoy = todayStr();
+  const deHoy = arr.find(e => e.date === hoy) || {};
+
+  const inputs = MEDIDAS_CAMPOS.map(f => {
+    const val = deHoy[f.key] != null ? deHoy[f.key] : "";
+    return `
+      <div class="med-field">
+        <label>${f.emoji} ${f.label} <span class="med-unit">(${f.unit})</span></label>
+        <input id="med-${f.key}" type="number" inputmode="decimal" step="0.1" placeholder="—" value="${val}">
+      </div>`;
+  }).join("");
+
+  // Tarjetas de evolución (solo campos con al menos un registro)
+  const cards = MEDIDAS_CAMPOS.map(f => {
+    const ult = medUltima(arr, f.key);
+    if (!ult) return "";
+    const prev = medPrevia(arr, f.key);
+    let delta = "";
+    if (prev){
+      const d = ult[f.key] - prev[f.key];
+      if (Math.abs(d) >= 0.05){
+        const baja = d < 0;
+        const bueno = f.menos ? baja : !baja; // según objetivo del campo
+        delta = `<span class="med-delta ${bueno ? "good" : "bad"}">${baja ? "▼" : "▲"} ${Math.abs(d).toFixed(1)}</span>`;
+      } else {
+        delta = `<span class="med-delta flat">＝</span>`;
+      }
+    }
+    return `
+      <div class="med-stat">
+        <div class="med-stat-top">
+          <span class="med-stat-label">${f.emoji} ${f.label}</span>
+          ${delta}
+        </div>
+        <div class="med-stat-val">${ult[f.key]}<span class="med-stat-unit">${f.unit}</span></div>
+        <div class="med-stat-date">Actualizado ${fmtShort(ult.date)}</div>
+      </div>`;
+  }).join("");
+
+  const tieneAlgo = arr.some(e => MEDIDAS_CAMPOS.some(f => e[f.key] != null));
+
+  c.innerHTML = `
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">📏 Registrar medidas de hoy</div>
+      <p style="color:var(--gris-600); font-size:13px; line-height:1.5; margin:0 0 14px;">
+        Cargá las que quieras (podés dejar vacías las demás). Medí siempre a la misma hora y en el mismo lugar del músculo para que sea comparable.
+      </p>
+      <div class="med-grid">${inputs}</div>
+      <button class="btn btn-primary" style="margin-top:14px;" onclick="saveMedidas()">Guardar medidas</button>
+    </div>
+
+    ${tieneAlgo ? `
+      <div class="section-title">Tu evolución</div>
+      <div class="med-stats-grid">${cards}</div>
+    ` : `
+      <div class="card" style="text-align:center;">
+        <div style="font-size:26px; margin-bottom:6px;">📐</div>
+        <div style="font-weight:800; font-size:15px;">Todavía no cargaste medidas</div>
+        <div style="color:var(--gris-600); font-size:13px; margin-top:4px; line-height:1.5;">
+          Registrá tus primeras medidas arriba. Con el tiempo vas a ver acá cómo evolucionan.
+        </div>
+      </div>
+    `}
+
+    <div class="card">
+      <div class="disclaimer">
+        Las medidas corporales son una gran forma de ver progreso cuando la balanza no se mueve: los músculos pesan y el cuerpo cambia de forma aunque el número no baje.
+      </div>
+    </div>
+  `;
+}
+
+function saveMedidas(){
+  const arr = State.measures();
+  const hoy = todayStr();
+  const entry = { date: hoy };
+  let any = false;
+  MEDIDAS_CAMPOS.forEach(f => {
+    const v = parseFloat($("#med-" + f.key).value);
+    if (v && v > 0){ entry[f.key] = v; any = true; }
+  });
+  if (!any){ toast("Cargá al menos una medida 📏"); return; }
+
+  const idx = arr.findIndex(e => e.date === hoy);
+  if (idx >= 0) arr[idx] = { ...arr[idx], ...entry };
+  else arr.push(entry);
+  arr.sort((a,b)=>a.date.localeCompare(b.date));
+  State.saveMeasures(arr);
+
+  // El peso se integra con el perfil y el historial de peso (gráfico de Métricas)
+  if (entry.peso){
+    const log = State.weightLog();
+    const li = log.findIndex(l => l.date === hoy);
+    if (li >= 0) log[li].peso = entry.peso; else log.push({ date: hoy, peso: entry.peso });
+    State.saveWeightLog(log);
+    const p = State.profile(); if (p){ p.peso = entry.peso; State.saveProfile(p); }
+  }
+
+  toast("Medidas guardadas 📏");
+  renderMedidas();
+}
+
+/* Empujón desde Inicio para registrar / actualizar medidas */
+function buildMeasuresNudge(){
+  const arr = State.measures().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const ultima = arr.length ? arr[arr.length - 1] : null;
+  if (!ultima){
+    return `
+      <div class="card nudge-card" onclick="goTo('medidas')">
+        <div class="nudge-emoji">📏</div>
+        <div class="nudge-txt">
+          <div class="nudge-title">Registrá tus medidas corporales</div>
+          <div class="nudge-sub">Cintura, brazos, pecho y más. Empezá hoy y seguí tu progreso real.</div>
+        </div>
+        <div class="nudge-arrow">›</div>
+      </div>`;
+  }
+  const dias = Math.floor((new Date(todayStr()) - new Date(ultima.date)) / 86400000);
+  if (dias >= 14){
+    return `
+      <div class="card nudge-card" onclick="goTo('medidas')">
+        <div class="nudge-emoji">📐</div>
+        <div class="nudge-txt">
+          <div class="nudge-title">Actualizá tus medidas</div>
+          <div class="nudge-sub">Pasaron ${dias} días desde tu última medición. Volvé a cargarlas y compará.</div>
+        </div>
+        <div class="nudge-arrow">›</div>
+      </div>`;
+  }
+  return "";
 }
 
 /* =========================================================

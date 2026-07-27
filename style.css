@@ -409,6 +409,39 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .pr-detail{ font-size:12.5px; color:var(--gris-600); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pr-kg{ font-size:15px; font-weight:800; color:var(--text); white-space:nowrap; }
 
+/* ===================== MEDIDAS CORPORALES ===================== */
+.med-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; }
+.med-field label{ display:block; font-size:12px; font-weight:800; color:var(--gris-600); margin-bottom:5px; }
+.med-field .med-unit{ color:var(--gris-400); font-weight:600; }
+.med-field input{
+  width:100%; padding:11px 12px; border:1.5px solid var(--gris-200);
+  border-radius:12px; font-size:16px; background:var(--surface); color:var(--text);
+}
+.med-field input:focus{ outline:none; border-color:var(--rojo); }
+.med-stats-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.med-stat{ background:var(--surface); border:1px solid var(--gris-100); border-radius:16px; padding:12px 14px; }
+.med-stat-top{ display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.med-stat-label{ font-size:12.5px; font-weight:800; color:var(--gris-600); }
+.med-stat-val{ font-size:24px; font-weight:800; color:var(--text); margin-top:4px; }
+.med-stat-unit{ font-size:13px; font-weight:700; color:var(--gris-400); margin-left:3px; }
+.med-stat-date{ font-size:11px; color:var(--gris-400); margin-top:2px; }
+.med-delta{ font-size:12px; font-weight:800; padding:2px 8px; border-radius:999px; white-space:nowrap; }
+.med-delta.good{ background:#e7f6ec; color:#1a7f37; }
+.med-delta.bad{ background:#fdecec; color:#c62828; }
+.med-delta.flat{ background:var(--gris-100); color:var(--gris-500); }
+
+/* ===================== TARJETA DE EMPUJÓN (nudge) ===================== */
+.nudge-card{
+  display:flex; align-items:center; gap:12px; cursor:pointer;
+  border:1.5px dashed var(--gris-200); transition: transform .12s, border-color .15s;
+}
+.nudge-card:active{ transform:scale(.98); border-color:var(--rojo); }
+.nudge-emoji{ font-size:26px; flex:0 0 auto; }
+.nudge-txt{ flex:1; min-width:0; }
+.nudge-title{ font-size:14.5px; font-weight:800; color:var(--text); }
+.nudge-sub{ font-size:12.5px; color:var(--gris-600); line-height:1.4; margin-top:2px; }
+.nudge-arrow{ font-size:24px; color:var(--gris-400); flex:0 0 auto; }
+
 /* ===================== VER OTRO DÍA (tira) ===================== */
 .upstrip{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin:0 -2px; scroll-snap-type:x proximity; }
 .upstrip::-webkit-scrollbar{ display:none; }
