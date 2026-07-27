@@ -6,7 +6,7 @@
 <title>Fac Fit</title>
 <meta name="theme-color" content="#0d0d0f">
 <meta name="description" content="Tu rutina de gimnasio, día por día.">
-<script>try{if(localStorage.getItem('ff_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<script>try{if(localStorage.getItem('ff_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}document.documentElement.classList.add('ff-boot');</script>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
@@ -27,12 +27,11 @@
   <!-- ===================== SPLASH ===================== -->
   <div class="screen active" id="screen-splash">
     <div class="splash-inner">
-      <img class="splash-logo-img" src="icons/splash-logo.png" alt="Fac Fit">
+      <div class="splash-logo-wrap">
+        <img class="splash-logo-img" src="icons/splash-logo.png" alt="Fac Fit">
+      </div>
       <div class="splash-sub">mejorando el número 29 en pista</div>
-      <svg class="splash-ring" viewBox="0 0 120 120" aria-hidden="true">
-        <circle class="ring-track" cx="60" cy="60" r="54"></circle>
-        <circle class="ring-fill"  cx="60" cy="60" r="54"></circle>
-      </svg>
+      <div class="splash-loader" aria-hidden="true"></div>
     </div>
   </div>
 

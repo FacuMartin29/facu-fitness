@@ -340,6 +340,8 @@ const $$ = sel => Array.from(document.querySelectorAll(sel));
 function showScreen(id){
   $$(".screen").forEach(s => s.classList.remove("active"));
   $(id).classList.add("active");
+  // Ya salimos del splash: liberamos el fondo negro de arranque
+  if (id !== "#screen-splash") document.documentElement.classList.remove("ff-boot");
 }
 
 function toast(msg){
@@ -359,12 +361,12 @@ const onb = { nombre:"", apellido:"", cumple:"", genero:"masculino", edad:"", pe
 
 function initApp(){
   const splash = $("#screen-splash");
-  // El anillo se llena en 3s (CSS). Al terminar, el logo se expande y
-  // el flujo de auth decide: login/registro, onboarding o home.
+  // El loader gira 2s. Al terminar, el logo se expande y el flujo de auth
+  // decide: login/registro, onboarding o home.
   setTimeout(() => {
     splash.classList.add("zoom");
     setTimeout(() => { authBoot(); }, 620);
-  }, 3000);
+  }, 2000);
 }
 
 /* ---------- ONBOARDING: PASO NOMBRE ---------- */

@@ -81,6 +81,10 @@ input, select{font-family:inherit;}
 @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
 
 /* ===================== SPLASH ===================== */
+/* Fondo negro sólido apenas arranca la app (evita el parpadeo/flash claro
+   que aparecía mientras el splash se desvanecía sobre el fondo de la página) */
+html.ff-boot, html.ff-boot body, html.ff-boot #app{ background:#000 !important; }
+
 #screen-splash{
   background: #000;
   color: var(--blanco);
@@ -90,6 +94,7 @@ input, select{font-family:inherit;}
   min-height:100vh;
   position:relative;
   overflow:hidden;
+  animation: none;   /* aparece instantáneo, sin fade que deje ver el fondo */
 }
 /* Brillo rojo sutil detrás del logo (así el negro no queda plano) */
 #screen-splash::before{
@@ -100,17 +105,25 @@ input, select{font-family:inherit;}
   pointer-events:none;
 }
 .splash-inner{ width:100%; display:flex; flex-direction:column; align-items:center; padding: 0; position:relative; z-index:1; }
+/* Contenedor que recorta los costados del banner (borde blanco/duro) con un leve zoom */
+.splash-logo-wrap{
+  width:100%; max-width:560px; margin:0 auto 14px; overflow:hidden;
+  /* Difuminado en los 4 lados para que el banner se funda con el negro */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 88%, transparent 100%),
+                      linear-gradient(to right,  transparent 0, #000 6%,  #000 94%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 88%, transparent 100%),
+              linear-gradient(to right,  transparent 0, #000 6%,  #000 94%, transparent 100%);
+  mask-composite: intersect;
+}
 .splash-logo-img{
-  width: 100%; max-width: 560px; height:auto; display:block;
-  margin: 0 auto 14px;
-  /* Difuminado arriba/abajo para que el banner se funda con el fondo negro */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 15%, #000 85%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 15%, #000 85%, transparent 100%);
-  animation: pop .7s cubic-bezier(.2,1.4,.4,1);
+  width: 100%; height:auto; display:block;
+  transform: scale(1.08);   /* leve zoom para comer los bordes de los costados */
   transform-origin: center center;
+  animation: pop .7s cubic-bezier(.2,1.4,.4,1) both;
   transition: transform .6s cubic-bezier(.3,0,.15,1), opacity .55s ease;
 }
-@keyframes pop{ from{opacity:0; transform:scale(.7);} to{opacity:1; transform:scale(1);} }
+@keyframes pop{ from{opacity:0; transform:scale(.9);} to{opacity:1; transform:scale(1.08);} }
 .splash-sub{
   color: var(--gris-400);
   font-size: 13px;
@@ -125,19 +138,23 @@ input, select{font-family:inherit;}
 }
 .splash-sub::before{ content:"“"; } .splash-sub::after{ content:"”"; }
 
-/* Anillo de carga (reemplaza la barra) — se llena en 3s */
-.splash-ring{ width:64px; height:64px; margin-top:30px; transform: rotate(-90deg); transition: opacity .35s ease; }
-.splash-ring .ring-track{ fill:none; stroke:var(--gris-800); stroke-width:6; }
-.splash-ring .ring-fill{
-  fill:none; stroke:var(--rojo); stroke-width:6; stroke-linecap:round;
-  stroke-dasharray: 339.292; stroke-dashoffset: 339.292;
-  animation: ringLoad 3s linear forwards;
+/* Loader: anillo con degradé rojo y glow, girando suave */
+.splash-loader{
+  width:46px; height:46px; margin-top:30px; border-radius:50%;
+  background: conic-gradient(from 90deg,
+      rgba(224,49,49,0) 0deg, rgba(224,49,49,.12) 70deg,
+      var(--rojo) 300deg, #ff6b6b 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 0);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 0);
+  animation: splashSpin .85s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(224,49,49,.5));
+  transition: opacity .35s ease;
 }
-@keyframes ringLoad{ to{ stroke-dashoffset: 0; } }
+@keyframes splashSpin{ to{ transform:rotate(1turn); } }
 
 /* Al terminar la carga: el logo se expande y se agranda, el resto se desvanece */
-#screen-splash.zoom .splash-logo-img{ transform: scale(1.9); opacity:0; }
-#screen-splash.zoom .splash-ring,
+#screen-splash.zoom .splash-logo-img{ transform: scale(1.75); opacity:0; }
+#screen-splash.zoom .splash-loader,
 #screen-splash.zoom .splash-sub{ opacity:0; }
 
 /* ===================== ONBOARDING ===================== */
