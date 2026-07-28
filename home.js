@@ -30,7 +30,7 @@ function renderHome(){
       <div class="card">
         <p style="color:var(--gris-600); font-size:14px; line-height:1.5; margin:0;">
           Aprovechá para descansar y recuperar. Si querés, andá a <b>Días de rutina</b> para revisar
-          o cambiar los días que entrenás esta semana, ${profile.nombre}.
+          o cambiar los días que entrenás esta semana, ${esc(profile.nombre)}.
         </p>
       </div>`;
     html += buildUpcomingCard();
@@ -93,7 +93,7 @@ function renderHome(){
         <div style="font-size:26px; margin-bottom:6px;">🏃</div>
         <div style="font-weight:800; font-size:15px;">Hoy toca puro cardio</div>
         <div style="color:var(--gris-600); font-size:13px; margin-top:4px; line-height:1.5;">
-          ${plan.cardio.durMin} minutos de ${plan.cardio.name.toLowerCase()}. Mantené un ritmo que puedas sostener, ${profile.nombre}.
+          ${plan.cardio.durMin} minutos de ${plan.cardio.name.toLowerCase()}. Mantené un ritmo que puedas sostener, ${esc(profile.nombre)}.
         </div>
       </div>`;
   }
@@ -111,7 +111,7 @@ function renderHome(){
     html += `
       <div class="card" style="text-align:center;">
         <div style="font-size:28px; margin-bottom:4px;">💪</div>
-        <div style="font-weight:800; font-size:15px;">¡Buen trabajo, ${profile.nombre}!</div>
+        <div style="font-weight:800; font-size:15px;">¡Buen trabajo, ${esc(profile.nombre)}!</div>
         <div style="color:var(--gris-600); font-size:13px; margin-top:4px;">Ya quedó registrada tu asistencia de hoy.</div>
       </div>`;
   } else if (already.status === "no_asistio") {

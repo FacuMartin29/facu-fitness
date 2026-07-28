@@ -11,9 +11,9 @@ function renderDatos(){
   c.innerHTML = `
     <div class="avatar-big">${initials(p.nombre, p.apellido)}</div>
     <div class="card">
-      <div class="field"><label>Nombre</label><input id="d-nombre" value="${p.nombre||""}"></div>
-      <div class="field"><label>Apellido</label><input id="d-apellido" value="${p.apellido||""}"></div>
-      <div class="field"><label>Correo electrónico</label><input id="d-email" type="email" autocapitalize="off" autocomplete="email" placeholder="tucorreo@ejemplo.com" value="${p.email||""}"></div>
+      <div class="field"><label>Nombre</label><input id="d-nombre" value="${esc(p.nombre)}"></div>
+      <div class="field"><label>Apellido</label><input id="d-apellido" value="${esc(p.apellido)}"></div>
+      <div class="field"><label>Correo electrónico</label><input id="d-email" type="email" autocapitalize="off" autocomplete="email" placeholder="tucorreo@ejemplo.com" value="${esc(p.email)}"></div>
       <div class="field"><label>Fecha de cumpleaños</label><input id="d-cumple" type="date" value="${p.cumple||""}"></div>
       <div class="field"><label>Género</label>
         <select id="d-genero">
@@ -138,8 +138,16 @@ function importDataFile(input){
         }
       });
       if (!count) throw new Error("vacío");
-      toast("Respaldo importado ✅ Recargando…");
-      setTimeout(()=>location.reload(), 900);
+      // Si hay sesión, subimos lo importado a la nube ANTES de recargar. Si no,
+      // al recargar pullUserData vería la nube como fuente de verdad y pisaría
+      // el respaldo recién importado.
+      if (typeof pushUserData === "function"){
+        toast("Respaldo importado ✅ Sincronizando…");
+        Promise.resolve(pushUserData()).finally(() => setTimeout(()=>location.reload(), 500));
+      } else {
+        toast("Respaldo importado ✅ Recargando…");
+        setTimeout(()=>location.reload(), 900);
+      }
     } catch(e){
       toast("No pude leer ese archivo de respaldo 😕");
     }

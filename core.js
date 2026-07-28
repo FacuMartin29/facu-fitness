@@ -2,6 +2,10 @@
    FAC FIT — Modulo: CORE
    Store, State, helpers, navegacion de pantallas, menu, tema, arranque e instalacion.
    ========================================================= */
+/* Version de la app (se sube junto con el cache del service worker). Sirve para
+   saber con qué versión se envió cada opinión en la encuesta. */
+const APP_VERSION = "v33";
+
 const DIAS_NOMBRE = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 const DIAS_CORTO  = ["D","L","M","X","J","V","S"];
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
@@ -24,6 +28,14 @@ function isoWeek(date){
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
   return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+}
+
+/* Escapa texto del usuario (nombre, etc.) antes de meterlo en innerHTML o en
+   un atributo, para que un caracter como < o " no rompa el HTML. */
+function esc(s){
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 /* ---------- ESTADO / STORAGE ---------- */

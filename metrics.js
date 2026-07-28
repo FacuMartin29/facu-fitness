@@ -73,7 +73,7 @@ async function submitEncuesta(){
   if (Object.keys(encuestaResp).length < 3){ toast("Contestá al menos unas preguntas 🙏"); return; }
 
   const profile = State.profile() || {};
-  const payload = { respuestas: encuestaResp, nombre: profile.nombre || "", app_version: (typeof CACHE_TAG !== "undefined" ? CACHE_TAG : "web") };
+  const payload = { respuestas: encuestaResp, nombre: profile.nombre || "", app_version: (typeof APP_VERSION !== "undefined" ? APP_VERSION : "web") };
   let guardado = false;
   if (typeof sb !== "undefined" && sb){
     try {
