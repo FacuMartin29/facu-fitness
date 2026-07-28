@@ -237,7 +237,14 @@
 <script src="exercises.js"></script>
 <script src="exercise-media.js"></script>
 <script src="auth.js"></script>
-<script src="app.js"></script>
+<!-- App dividida por módulos (core primero define Store/State/utils; el resto se
+     resuelve en runtime, así cada pantalla se arma solo cuando se abre). -->
+<script src="core.js"></script>
+<script src="training.js"></script>
+<script src="home.js"></script>
+<script src="profile.js"></script>
+<script src="nutrition.js"></script>
+<script src="metrics.js"></script>
 <script>
   // Reemplazo del ícono de hamburguesa (evita depender del orden de carga de app.js)
   document.getElementById("burger-btn").innerHTML =

@@ -258,6 +258,29 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .menu-item svg{ width:20px; height:20px; flex-shrink:0; opacity:.85; }
 .menu-item:hover, .menu-item.active{ background: var(--negro2); color:var(--blanco); }
 .menu-item.active{ color: var(--rojo); }
+
+/* ---- Grupos del menú (acordeón) ---- */
+.menu-group{ display:flex; flex-direction:column; }
+.menu-group-head{
+  display:flex; align-items:center; gap:14px; padding:13px 10px; border-radius:12px; color:#d9dbe0;
+  font-weight:700; font-size:15px; cursor:pointer; transition: background .15s;
+}
+.menu-group-head svg{ width:20px; height:20px; flex-shrink:0; opacity:.85; }
+.menu-group-head:hover{ background: var(--negro2); color:var(--blanco); }
+.menu-chevron{ margin-left:auto; display:flex; transition: transform .2s ease; opacity:.6; }
+.menu-chevron svg{ width:16px; height:16px; }
+.menu-group.open > .menu-group-head .menu-chevron{ transform: rotate(90deg); }
+/* Cuerpo colapsable */
+.menu-group-body{
+  display:flex; flex-direction:column; gap:2px;
+  max-height:0; overflow:hidden; opacity:0;
+  transition: max-height .25s ease, opacity .2s ease;
+  padding-left:16px; margin-left:9px; border-left:2px solid var(--negro2);
+}
+.menu-group.open > .menu-group-body{ max-height:260px; opacity:1; margin-top:2px; }
+.menu-subitem{ font-size:14px; padding:11px 10px; }
+.menu-subitem svg{ width:18px; height:18px; }
+
 .menu-footer{ margin-top:auto; font-size:11px; color:var(--gris-600); line-height:1.6; }
 
 /* ===================== CARDS GENERALES ===================== */
