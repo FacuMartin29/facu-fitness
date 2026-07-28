@@ -7,7 +7,15 @@ const DIAS_CORTO  = ["D","L","M","X","J","V","S"];
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 
 /* ---------- HELPERS DE FECHA ---------- */
-function fmtDate(d){ return d.toISOString().slice(0,10); }
+/* Fecha local en formato YYYY-MM-DD. Ojo: NO usar toISOString() acá porque
+   devuelve UTC y, de noche en Argentina (UTC-3), adelantaba el día — rompía
+   "hoy", la rutina del día y la fecha de la asistencia. */
+function fmtDate(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 function todayStr(){ return fmtDate(new Date()); }
 function parseDate(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y, m-1, d); }
 function isoWeek(date){
