@@ -1,11 +1,11 @@
 /* =========================================================
    FAC FIT — Modulo: NUTRITION (Nutricion)
-   Metas de calorias y macros (Mifflin-St Jeor + actividad + objetivo).
-   ========================================================= */
-/* =========================================================
-   MÓDULO: NUTRICIÓN  (Fase 1 — metas de calorías y macros)
-   Metas estimadas con Mifflin-St Jeor + factor de actividad
-   según días de entrenamiento + ajuste por objetivo.
+   App de nutricion completa, en 4 capas:
+   1) Perfil nutricional (dieta, restricciones, nº de comidas)
+   2) Metas (Mifflin-St Jeor + actividad + objetivo)
+   3) Menus y recetas (generador + biblioteca + lista de compras)
+   4) Seguimiento (diario de comidas + anillo de progreso)
+   Datos de alimentos/recetas en nutrition-data.js
    ========================================================= */
 const OBJETIVO_LABEL = { ganar_musculo:"Ganar músculo", perder_grasa:"Perder grasa", mantener:"Mantener" };
 
@@ -54,75 +54,560 @@ const OBJETIVO_TIP = {
   mantener:      "Comé alrededor de tu gasto y ajustá según cómo se mueva la balanza y tus medidas.",
 };
 
+/* ---------- Reparto de comidas según cuántas hace la persona ---------- */
+const MEAL_PLANS = {
+  3: [ {key:"desayuno",label:"Desayuno",pct:.30}, {key:"almuerzo",label:"Almuerzo",pct:.40}, {key:"cena",label:"Cena",pct:.30} ],
+  4: [ {key:"desayuno",label:"Desayuno",pct:.25}, {key:"almuerzo",label:"Almuerzo",pct:.35}, {key:"merienda",label:"Merienda",pct:.15}, {key:"cena",label:"Cena",pct:.25} ],
+  5: [ {key:"desayuno",label:"Desayuno",pct:.22}, {key:"snack",label:"Colación",pct:.10}, {key:"almuerzo",label:"Almuerzo",pct:.30}, {key:"merienda",label:"Merienda",pct:.13}, {key:"cena",label:"Cena",pct:.25} ],
+};
+const DIETAS = { omnivoro:"Omnívoro", vegetariano:"Vegetariano", vegano:"Vegano" };
+const SEM_EMOJI = { verde:"🟢", amarillo:"🟡", rojo:"🔴" };
+const SEM_LABEL = { verde:"Ideal", amarillo:"Con medida", rojo:"Ocasional" };
+
+/* ---------- Preferencias (viven dentro del perfil, ya sincroniza) ---------- */
+function nutriPrefs(){
+  const p = State.profile() || {};
+  return Object.assign({ dieta:"omnivoro", sinTacc:false, comidas:4, excluir:[] }, p.nutri || {});
+}
+function saveNutriPrefs(patch){
+  const p = State.profile() || {};
+  p.nutri = Object.assign(nutriPrefs(), patch);
+  State.saveProfile(p);
+}
+
+/* ---------- Diario de comidas y menú guardado (claves nuevas) ---------- */
+function nutriLog(){ return Store.get("ff_nutriLog", {}); }
+function saveNutriLog(o){ Store.set("ff_nutriLog", o); }
+function dayLog(date){ return nutriLog()[date] || []; }
+function nutriMenu(){ return Store.get("ff_nutriMenu", null); }
+function saveNutriMenu(m){ Store.set("ff_nutriMenu", m); }
+
+/* ---------- Macros de alimentos y recetas ---------- */
+function foodMacros(food, grams){
+  const k = grams / 100;
+  return { kcal:Math.round(food.kcal*k), p:+(food.p*k).toFixed(1), c:+(food.c*k).toFixed(1), g:+(food.g*k).toFixed(1) };
+}
+function recipeMacros(recipe, mult){
+  mult = mult || 1;
+  const t = { kcal:0, p:0, c:0, g:0 };
+  recipe.ingr.forEach(i => {
+    const f = FOOD_BY_ID[i.f]; if (!f) return;
+    const m = foodMacros(f, i.g * mult);
+    t.kcal += m.kcal; t.p += m.p; t.c += m.c; t.g += m.g;
+  });
+  return { kcal:Math.round(t.kcal), p:Math.round(t.p), c:Math.round(t.c), g:Math.round(t.g) };
+}
+/* Dieta de una receta = la más restrictiva que cumplen TODOS sus ingredientes */
+function recipeDiet(recipe){
+  const all = tag => recipe.ingr.every(i => (FOOD_BY_ID[i.f]?.tags||[]).includes(tag));
+  return { vegano:all(VG), vegetariano:all(V), sintacc:all(ST) };
+}
+
+/* ---------- Filtros por dieta / restricciones ---------- */
+function foodAllowed(food, prefs){
+  prefs = prefs || nutriPrefs();
+  if (prefs.dieta === "vegano" && !food.tags.includes(VG)) return false;
+  if (prefs.dieta === "vegetariano" && !food.tags.includes(V)) return false;
+  if (prefs.sinTacc && !food.tags.includes(ST)) return false;
+  if (prefs.excluir && prefs.excluir.includes(food.id)) return false;
+  return true;
+}
+function recipeAllowed(recipe, prefs){
+  prefs = prefs || nutriPrefs();
+  return recipe.ingr.every(i => FOOD_BY_ID[i.f] && foodAllowed(FOOD_BY_ID[i.f], prefs));
+}
+
+/* ---------- Semáforo según objetivo ---------- */
+function semaforo(food, objetivo){
+  objetivo = objetivo || getObjetivo();
+  let s = food.sem;
+  if (objetivo === "ganar_musculo" && s === "amarillo" && (food.cat === "carbo" || food.cat === "fruta")) s = "verde";
+  if (objetivo === "perder_grasa" && s === "amarillo" && (food.cat === "snack" || food.cat === "grasa")) s = "rojo";
+  return s;
+}
+
+/* ---------- Totales del día (diario) ---------- */
+function dayTotals(date){
+  const t = { kcal:0, p:0, c:0, g:0 };
+  dayLog(date).forEach(it => { t.kcal += it.kcal||0; t.p += it.p||0; t.c += it.c||0; t.g += it.g||0; });
+  t.p = Math.round(t.p); t.c = Math.round(t.c); t.g = Math.round(t.g);
+  return t;
+}
+
+/* =========================================================
+   NAVEGACIÓN DEL MÓDULO (sub-pestañas)
+   ========================================================= */
+let nutriTab = "hoy";
+function nutriGo(sub){ nutriTab = sub; renderNutricion(); }
+
 function renderNutricion(){
   const c = $("#tab-nutricion");
   const n = computeNutrition();
-
   if (!n){
     c.innerHTML = `
       <div class="card" style="text-align:center;">
         <div style="font-size:26px; margin-bottom:6px;">🥗</div>
-        <div style="font-weight:800; font-size:15px;">Completá tus datos para calcular tu nutrición</div>
+        <div style="font-weight:800; font-size:15px;">Completá tus datos para tu nutrición</div>
         <div style="color:var(--gris-600); font-size:13px; margin:6px 0 14px; line-height:1.5;">
-          Necesitamos tu <b>peso</b>, <b>altura</b> y <b>edad</b> para estimar tus calorías y proteína.
+          Necesitamos tu <b>peso</b>, <b>altura</b> y <b>edad</b> para armar tu plan.
         </div>
         <button class="btn btn-primary" onclick="goTo('datos')">Ir a Datos personales</button>
       </div>`;
     return;
   }
+  const tabs = [
+    { id:"hoy", label:"Hoy", emoji:"📊" },
+    { id:"menus", label:"Menús", emoji:"🍽️" },
+    { id:"alimentos", label:"Alimentos", emoji:"🥑" },
+    { id:"perfil", label:"Plan", emoji:"🎯" },
+  ];
+  const pills = tabs.map(t => `<button class="nsub ${nutriTab===t.id?"active":""}" onclick="nutriGo('${t.id}')">${t.emoji} ${t.label}</button>`).join("");
+  let body = "";
+  if (nutriTab === "hoy") body = viewNutriHoy(n);
+  else if (nutriTab === "menus") body = viewNutriMenus(n);
+  else if (nutriTab === "alimentos") body = viewNutriAlimentos(n);
+  else body = viewNutriPerfil(n);
+  c.innerHTML = `<div class="nsub-bar">${pills}</div>${body}`;
+}
 
-  const kcalProt = n.prot * 4, kcalCarbs = n.carbs * 4, kcalGrasa = n.grasa * 9;
-  const total = kcalProt + kcalCarbs + kcalGrasa || 1;
-  const pctP = Math.round(kcalProt / total * 100);
-  const pctC = Math.round(kcalCarbs / total * 100);
-  const pctG = Math.max(0, 100 - pctP - pctC);
-
-  const macro = (emoji, nombre, gramos, kcal, pct, color) => `
-    <div class="macro-row">
-      <div class="macro-head">
-        <span class="macro-name">${emoji} ${nombre}</span>
-        <span class="macro-g">${gramos} g <span class="macro-kcal">· ${kcal} kcal</span></span>
-      </div>
-      <div class="macro-bar"><div class="macro-fill" style="width:${pct}%; background:${color};"></div></div>
+/* =========================================================
+   VISTA "HOY" — diario + anillo de progreso
+   ========================================================= */
+function nutriRing(consumed, goal){
+  const r = 52, C = 2 * Math.PI * r;
+  const pct = goal ? Math.min(1, consumed / goal) : 0;
+  const off = C * (1 - pct);
+  const over = consumed > goal;
+  return `
+    <svg viewBox="0 0 120 120" class="nutri-ring">
+      <circle cx="60" cy="60" r="${r}" class="nr-track"/>
+      <circle cx="60" cy="60" r="${r}" class="nr-fill ${over?"over":""}" style="stroke-dasharray:${C.toFixed(1)}; stroke-dashoffset:${off.toFixed(1)};"/>
+    </svg>`;
+}
+function macroMini(label, val, goal, color){
+  const pct = goal ? Math.min(100, Math.round(val/goal*100)) : 0;
+  return `
+    <div class="mm">
+      <div class="mm-top"><span>${label}</span><b>${val}/${goal}g</b></div>
+      <div class="mm-bar"><div class="mm-fill" style="width:${pct}%; background:${color};"></div></div>
     </div>`;
+}
+function viewNutriHoy(n){
+  const date = todayStr();
+  const t = dayTotals(date);
+  const rem = Math.max(0, n.cal - t.kcal);
+  const prefs = nutriPrefs();
+  const plan = MEAL_PLANS[prefs.comidas] || MEAL_PLANS[4];
+  const log = dayLog(date);
 
-  c.innerHTML = `
+  const meals = plan.map(m => {
+    const items = log.filter(it => it.meal === m.key);
+    const mk = items.reduce((s,it)=>s+(it.kcal||0),0);
+    const rows = items.map(it => `
+      <div class="diary-item">
+        <div class="di-main"><span class="di-name">${it.emoji||"•"} ${esc(it.name)}</span>
+          <span class="di-sub">${it.detail||""} · ${it.kcal} kcal · P${it.p} C${it.c} G${it.g}</span></div>
+        <button class="di-del" onclick="removeDiaryItem('${it.uid}')">✕</button>
+      </div>`).join("");
+    return `
+      <div class="card meal-card">
+        <div class="meal-head">
+          <div><span class="meal-name">${m.label}</span> <span class="meal-target">meta ~${Math.round(n.cal*m.pct)} kcal</span></div>
+          <span class="meal-kcal">${mk} kcal</span>
+        </div>
+        ${rows || `<div class="meal-empty">Todavía no cargaste nada acá.</div>`}
+        <button class="btn btn-outline meal-add" onclick="openAddFood('${m.key}')">+ Agregar alimento</button>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="card nutri-today">
+      <div class="nt-ring">
+        ${nutriRing(t.kcal, n.cal)}
+        <div class="nt-center">
+          <div class="nt-rem">${rem}</div>
+          <div class="nt-rem-lbl">kcal restantes</div>
+        </div>
+      </div>
+      <div class="nt-macros">
+        ${macroMini("Proteína", t.p, n.prot, "#e03131")}
+        ${macroMini("Carbos", t.c, n.carbs, "#f59f00")}
+        ${macroMini("Grasas", t.g, n.grasa, "#40c057")}
+        <div class="nt-eaten">${t.kcal} de ${n.cal} kcal consumidas</div>
+      </div>
+    </div>
+    ${meals}
+    <button class="btn btn-ghost" style="margin-top:4px;" onclick="nutriGo('menus')">🍽️ ¿No sabés qué comer? Generá un menú</button>
+  `;
+}
+
+/* ---------- Modal: agregar alimento/receta al diario ---------- */
+let addFoodMeal = "almuerzo";
+function openAddFood(meal){
+  addFoodMeal = meal;
+  $("#modal-body").innerHTML = `
+    <div class="modal-title">Agregar a ${mealLabel(meal)}</div>
+    <input id="nf-search" class="nf-search" placeholder="Buscar alimento o receta…" oninput="nfSearch(this.value)" autocomplete="off">
+    <div id="nf-results" class="nf-results">${nfResultsHTML("")}</div>
+    <button class="btn btn-ghost" style="margin-top:8px;" onclick="closeModal()">Cerrar</button>
+  `;
+  $("#modal-overlay").classList.add("open");
+  setTimeout(()=>{ const i=$("#nf-search"); if(i) i.focus(); }, 60);
+}
+function mealLabel(key){
+  for (const n in MEAL_PLANS){ const f = MEAL_PLANS[n].find(m=>m.key===key); if (f) return f.label; }
+  return "comida";
+}
+function nfSearch(q){ const el = $("#nf-results"); if (el) el.innerHTML = nfResultsHTML(q); }
+function nfResultsHTML(q){
+  const prefs = nutriPrefs();
+  q = (q||"").toLowerCase().trim();
+  const foods = FOODS.filter(f => foodAllowed(f,prefs) && (!q || f.name.toLowerCase().includes(q)));
+  const recipes = RECIPES.filter(r => recipeAllowed(r,prefs) && (!q || r.name.toLowerCase().includes(q)));
+  const rHtml = recipes.slice(0,8).map(r => {
+    const mm = recipeMacros(r);
+    return `<div class="nf-row" onclick="pickRecipe('${r.id}')">
+      <div class="nf-left">${r.emoji||"🍽️"} <div><div class="nf-name">${r.name}</div><div class="nf-sub">Receta · ${mm.kcal} kcal</div></div></div>
+      <span class="nf-add">+</span></div>`;
+  }).join("");
+  const fHtml = foods.slice(0,40).map(f => {
+    const s = semaforo(f);
+    return `<div class="nf-row" onclick="pickFood('${f.id}')">
+      <div class="nf-left">${SEM_EMOJI[s]} <div><div class="nf-name">${f.name}</div><div class="nf-sub">${f.kcal} kcal/100g · P${f.p} C${f.c} G${f.g}</div></div></div>
+      <span class="nf-add">+</span></div>`;
+  }).join("");
+  const rSec = recipes.length ? `<div class="nf-cat">Recetas</div>${rHtml}` : "";
+  const fSec = foods.length ? `<div class="nf-cat">Alimentos</div>${fHtml}` : "";
+  return (rSec + fSec) || `<div class="meal-empty">Sin resultados para "${esc(q)}".</div>`;
+}
+/* Alimento: elegir cantidad */
+function pickFood(foodId){
+  const f = FOOD_BY_ID[foodId]; if (!f) return;
+  const defG = f.unit ? f.unit.g : 100;
+  const unitTxt = f.unit ? `<button class="nf-chip" onclick="nfSetUnits(1)">1 ${f.unit.label}</button><button class="nf-chip" onclick="nfSetUnits(2)">2 ${f.unit.label}</button>` : "";
+  $("#modal-body").innerHTML = `
+    <div class="modal-title">${SEM_EMOJI[semaforo(f)]} ${f.name}</div>
+    <div class="modal-desc" style="margin-bottom:10px;">${f.kcal} kcal cada 100 g · P${f.p} · C${f.c} · G${f.g}</div>
+    <label class="nf-label">Cantidad (gramos)</label>
+    <div class="nf-qty">
+      <input id="nf-grams" type="number" inputmode="numeric" value="${defG}" oninput="nfPreview('${foodId}')">
+      ${f.unit ? `<span class="nf-unit">${f.unit.label} ≈ ${f.unit.g} g</span>` : ""}
+    </div>
+    <div class="nf-chips">${unitTxt}<button class="nf-chip" onclick="nfSetGrams(100)">100 g</button><button class="nf-chip" onclick="nfSetGrams(150)">150 g</button></div>
+    <div id="nf-prev" class="nf-preview"></div>
+    <button class="btn btn-primary" style="margin-top:12px;" onclick="confirmAddFood('${foodId}')">Agregar</button>
+    <button class="btn btn-ghost" style="margin-top:8px;" onclick="openAddFood('${addFoodMeal}')">‹ Volver</button>
+  `;
+  nfPreview(foodId);
+}
+function nfSetGrams(g){ const i=$("#nf-grams"); if(i){ i.value=g; nfPreview(i.dataset.fid||window._nfFid); } }
+function nfSetUnits(u){ const i=$("#nf-grams"); const f=FOOD_BY_ID[window._nfFid]; if(i&&f&&f.unit){ i.value=Math.round(f.unit.g*u); nfPreview(window._nfFid); } }
+function nfPreview(foodId){
+  window._nfFid = foodId;
+  const f = FOOD_BY_ID[foodId]; const g = +($("#nf-grams").value||0);
+  const m = foodMacros(f, g);
+  const el = $("#nf-prev");
+  if (el) el.innerHTML = `<b>${m.kcal}</b> kcal · P ${m.p} · C ${m.c} · G ${m.g}`;
+}
+function confirmAddFood(foodId){
+  const f = FOOD_BY_ID[foodId]; const g = +($("#nf-grams").value||0);
+  if (!g || g <= 0){ toast("Poné una cantidad válida"); return; }
+  const m = foodMacros(f, g);
+  addDiaryItem({ name:f.name, emoji:SEM_EMOJI[semaforo(f)], detail:`${g} g`, meal:addFoodMeal, kind:"food", ...m });
+  toast("Agregado al diario ✅");
+  closeModal(); renderNutricion();
+}
+/* Receta: elegir porción */
+function pickRecipe(recipeId){
+  const r = RECIPE_BY_ID[recipeId]; if (!r) return;
+  const mm = recipeMacros(r);
+  const ingr = r.ingr.map(i => { const f=FOOD_BY_ID[i.f]; return `<li>${f?f.name:i.f} — ${i.g} g</li>`; }).join("");
+  const steps = (r.steps||[]).map(s=>`<li>${s}</li>`).join("");
+  $("#modal-body").innerHTML = `
+    <div class="modal-title">${r.emoji||"🍽️"} ${r.name}</div>
+    <div class="modal-desc" style="margin-bottom:8px;">Porción base: <b>${mm.kcal}</b> kcal · P${mm.p} · C${mm.c} · G${mm.g}</div>
+    <label class="nf-label">Porciones</label>
+    <div class="nf-chips">
+      <button class="nf-chip" onclick="nfSetPortion(0.5)">½</button>
+      <button class="nf-chip" onclick="nfSetPortion(1)">1</button>
+      <button class="nf-chip" onclick="nfSetPortion(1.5)">1½</button>
+      <button class="nf-chip" onclick="nfSetPortion(2)">2</button>
+    </div>
+    <input id="nf-portion" type="hidden" value="1">
+    <div id="nf-prev" class="nf-preview"></div>
+    <div class="recipe-block"><div class="recipe-h">Ingredientes</div><ul class="recipe-ul">${ingr}</ul></div>
+    ${steps?`<div class="recipe-block"><div class="recipe-h">Preparación</div><ol class="recipe-ol">${steps}</ol></div>`:""}
+    <button class="btn btn-primary" style="margin-top:12px;" onclick="confirmAddRecipe('${recipeId}')">Agregar al diario</button>
+    <button class="btn btn-ghost" style="margin-top:8px;" onclick="openAddFood('${addFoodMeal}')">‹ Volver</button>
+  `;
+  window._nfRid = recipeId;
+  nfSetPortion(1);
+}
+function nfSetPortion(p){
+  const inp = $("#nf-portion"); if (inp) inp.value = p;
+  const r = RECIPE_BY_ID[window._nfRid]; if (!r) return;
+  const m = recipeMacros(r, p);
+  const el = $("#nf-prev");
+  if (el) el.innerHTML = `<b>${m.kcal}</b> kcal · P ${m.p} · C ${m.c} · G ${m.g}`;
+}
+function confirmAddRecipe(recipeId){
+  const r = RECIPE_BY_ID[recipeId]; const mult = +($("#nf-portion").value||1);
+  const m = recipeMacros(r, mult);
+  addDiaryItem({ name:r.name, emoji:r.emoji||"🍽️", detail:`${mult===1?"1 porción":mult+" porciones"}`, meal:addFoodMeal, kind:"recipe", ...m });
+  toast("Receta agregada ✅");
+  closeModal(); renderNutricion();
+}
+function addDiaryItem(item){
+  const log = nutriLog(); const date = todayStr();
+  log[date] = log[date] || [];
+  item.uid = "d" + Date.now() + Math.floor(Math.random()*1000);
+  log[date].push(item);
+  saveNutriLog(log);
+}
+function removeDiaryItem(uid){
+  const log = nutriLog(); const date = todayStr();
+  log[date] = (log[date]||[]).filter(it => it.uid !== uid);
+  if (!log[date].length) delete log[date];
+  saveNutriLog(log);
+  renderNutricion();
+}
+
+/* =========================================================
+   VISTA "MENÚS" — generador + biblioteca + lista de compras
+   ========================================================= */
+function generateMenu(){
+  const n = computeNutrition(); if (!n) return null;
+  const prefs = nutriPrefs();
+  const plan = MEAL_PLANS[prefs.comidas] || MEAL_PLANS[4];
+  const used = new Set();
+  const meals = plan.map(m => {
+    const target = Math.round(n.cal * m.pct);
+    let cands = RECIPES.filter(r => r.meals.includes(m.key) && recipeAllowed(r,prefs) && !used.has(r.id));
+    if (!cands.length) cands = RECIPES.filter(r => r.meals.includes(m.key) && recipeAllowed(r,prefs));
+    if (!cands.length) return { mealKey:m.key, mealLabel:m.label, target, recipeId:null, mult:1 };
+    cands.sort((a,b)=>Math.abs(recipeMacros(a).kcal-target)-Math.abs(recipeMacros(b).kcal-target));
+    const pick = cands[Math.floor(Math.random()*Math.min(3,cands.length))];
+    used.add(pick.id);
+    let mult = target / recipeMacros(pick).kcal;
+    mult = Math.max(0.6, Math.min(1.8, Math.round(mult*10)/10));
+    return { mealKey:m.key, mealLabel:m.label, target, recipeId:pick.id, mult };
+  });
+  return { date: todayStr(), cal:n.cal, meals };
+}
+function regenMenu(){ saveNutriMenu(generateMenu()); renderNutricion(); }
+function viewNutriMenus(n){
+  const menu = nutriMenu();
+  let menuHtml = "";
+  if (menu){
+    let tot = { kcal:0,p:0,c:0,g:0 };
+    const rows = menu.meals.map(mm => {
+      const r = mm.recipeId ? RECIPE_BY_ID[mm.recipeId] : null;
+      if (!r) return `<div class="menu-meal"><div class="mm-label">${mm.mealLabel}</div><div class="meal-empty">Sin receta para tu dieta.</div></div>`;
+      const m = recipeMacros(r, mm.mult);
+      tot.kcal+=m.kcal; tot.p+=m.p; tot.c+=m.c; tot.g+=m.g;
+      return `
+        <div class="menu-meal" onclick="pickRecipe('${r.id}')">
+          <div class="mm-label">${mm.mealLabel} <span class="mm-tgt">~${mm.target} kcal</span></div>
+          <div class="mm-recipe">
+            <span class="mm-emoji">${r.emoji||"🍽️"}</span>
+            <div class="mm-info"><div class="mm-rname">${r.name}${mm.mult!==1?` <span class="mm-x">×${mm.mult}</span>`:""}</div>
+              <div class="mm-macros">${m.kcal} kcal · P${m.p} · C${m.c} · G${m.g}</div></div>
+          </div>
+        </div>`;
+    }).join("");
+    menuHtml = `
+      <div class="card">
+        <div class="menu-top">
+          <div class="section-title" style="margin:0;">Menú del día</div>
+          <button class="nf-chip" onclick="regenMenu()">🔄 Otro</button>
+        </div>
+        ${rows}
+        <div class="menu-total">Total: <b>${Math.round(tot.kcal)}</b> kcal · P${Math.round(tot.p)} · C${Math.round(tot.c)} · G${Math.round(tot.g)} <span class="menu-goal">(meta ${n.cal})</span></div>
+        <button class="btn btn-primary" style="margin-top:10px;" onclick="useMenuToday()">Usar este menú hoy</button>
+        <button class="btn btn-outline" style="margin-top:8px;" onclick="showShoppingList()">🛒 Lista de compras</button>
+      </div>`;
+  } else {
+    menuHtml = `
+      <div class="card" style="text-align:center;">
+        <div style="font-size:26px;margin-bottom:6px;">🍽️</div>
+        <div style="font-weight:800;font-size:15px;">Generá tu menú del día</div>
+        <div style="color:var(--gris-600);font-size:13px;margin:6px 0 12px;line-height:1.5;">Armamos un día completo que cierra tus <b>${n.cal} kcal</b> y respeta tu dieta.</div>
+        <button class="btn btn-primary" onclick="regenMenu()">✨ Generar menú</button>
+      </div>`;
+  }
+  // Biblioteca de recetas
+  const prefs = nutriPrefs();
+  const recetas = RECIPES.filter(r => recipeAllowed(r,prefs));
+  const lib = recetas.map(r => {
+    const m = recipeMacros(r);
+    return `<div class="recipe-card" onclick="pickRecipe('${r.id}')">
+      <span class="rc-emoji">${r.emoji||"🍽️"}</span>
+      <div class="rc-info"><div class="rc-name">${r.name}</div><div class="rc-macros">${m.kcal} kcal · P${m.p}</div></div>
+    </div>`;
+  }).join("");
+  return `
+    ${menuHtml}
+    <div class="section-title">Recetas (${recetas.length})</div>
+    <div class="recipe-grid">${lib}</div>
+  `;
+}
+function useMenuToday(){
+  const menu = nutriMenu(); if (!menu) return;
+  const log = nutriLog(); const date = todayStr();
+  log[date] = []; // reemplaza el día con el menú
+  menu.meals.forEach(mm => {
+    const r = mm.recipeId ? RECIPE_BY_ID[mm.recipeId] : null; if (!r) return;
+    const m = recipeMacros(r, mm.mult);
+    log[date].push({ uid:"d"+Date.now()+Math.floor(Math.random()*100000), name:r.name, emoji:r.emoji||"🍽️",
+      detail: mm.mult!==1?`${mm.mult} porciones`:"1 porción", meal:mm.mealKey, kind:"recipe", ...m });
+  });
+  saveNutriLog(log);
+  toast("Menú cargado en tu diario 📋");
+  nutriGo("hoy");
+}
+function showShoppingList(){
+  const menu = nutriMenu(); if (!menu) return;
+  const acc = {};
+  menu.meals.forEach(mm => {
+    const r = mm.recipeId ? RECIPE_BY_ID[mm.recipeId] : null; if (!r) return;
+    r.ingr.forEach(i => { acc[i.f] = (acc[i.f]||0) + i.g * (mm.mult||1); });
+  });
+  const byCat = {};
+  Object.keys(acc).forEach(fid => {
+    const f = FOOD_BY_ID[fid]; if (!f) return;
+    (byCat[f.cat] = byCat[f.cat] || []).push({ name:f.name, g:Math.round(acc[fid]) });
+  });
+  const html = Object.keys(byCat).map(cat => `
+    <div class="shop-cat">${FOOD_CATS[cat]||cat}</div>
+    ${byCat[cat].map(x=>`<div class="shop-item"><span>${x.name}</span><b>${x.g} g</b></div>`).join("")}
+  `).join("");
+  $("#modal-body").innerHTML = `
+    <div class="modal-title">🛒 Lista de compras</div>
+    <div class="modal-desc" style="margin-bottom:10px;">Ingredientes del menú del día.</div>
+    ${html}
+    <button class="btn btn-ghost" style="margin-top:12px;" onclick="closeModal()">Cerrar</button>
+  `;
+  $("#modal-overlay").classList.add("open");
+}
+
+/* =========================================================
+   VISTA "ALIMENTOS" — buscador + semáforo
+   ========================================================= */
+let alimQuery = "";
+function alimSearch(q){ alimQuery = q; const el=$("#alim-list"); if(el) el.innerHTML = alimListHTML(); }
+function alimListHTML(){
+  const prefs = nutriPrefs();
+  const q = (alimQuery||"").toLowerCase().trim();
+  const cats = {};
+  FOODS.forEach(f => {
+    if (!foodAllowed(f,prefs)) return;
+    if (q && !f.name.toLowerCase().includes(q)) return;
+    (cats[f.cat] = cats[f.cat] || []).push(f);
+  });
+  const order = Object.keys(FOOD_CATS).filter(c=>cats[c]);
+  if (!order.length) return `<div class="meal-empty">Sin resultados para "${esc(q)}".</div>`;
+  return order.map(cat => `
+    <div class="alim-cat">${FOOD_CATS[cat]}</div>
+    ${cats[cat].map(f => {
+      const s = semaforo(f);
+      return `<div class="alim-row" onclick="openFoodInfo('${f.id}')">
+        <div class="nf-left">${SEM_EMOJI[s]} <div><div class="nf-name">${f.name}</div>
+          <div class="nf-sub">${f.kcal} kcal/100g · P${f.p} · C${f.c} · G${f.g}</div></div></div>
+        <span class="alim-sem sem-${s}">${SEM_LABEL[s]}</span>
+      </div>`;
+    }).join("")}
+  `).join("");
+}
+function viewNutriAlimentos(n){
+  return `
+    <div class="card" style="padding-bottom:8px;">
+      <div class="sem-legend">
+        <span>🟢 Ideal</span><span>🟡 Con medida</span><span>🔴 Ocasional</span>
+      </div>
+      <div class="disclaimer" style="margin:0;">El semáforo se ajusta a tu objetivo: <b>${OBJETIVO_LABEL[n.objetivo]}</b>.</div>
+    </div>
+    <input class="nf-search" placeholder="Buscar alimento…" oninput="alimSearch(this.value)" value="${esc(alimQuery)}" autocomplete="off">
+    <div id="alim-list" class="alim-list">${alimListHTML()}</div>
+  `;
+}
+function openFoodInfo(foodId){
+  const f = FOOD_BY_ID[foodId]; if (!f) return;
+  const s = semaforo(f);
+  const prefs = nutriPrefs();
+  const excl = prefs.excluir.includes(foodId);
+  $("#modal-body").innerHTML = `
+    <div class="modal-title">${SEM_EMOJI[s]} ${f.name}</div>
+    <div class="food-sem sem-${s}">${SEM_LABEL[s]} para ${OBJETIVO_LABEL[getObjetivo()].toLowerCase()}</div>
+    <div class="food-macros-grid">
+      <div><b>${f.kcal}</b><span>kcal</span></div>
+      <div><b>${f.p}</b><span>Proteína</span></div>
+      <div><b>${f.c}</b><span>Carbos</span></div>
+      <div><b>${f.g}</b><span>Grasas</span></div>
+    </div>
+    <div class="disclaimer" style="margin-top:10px;">Valores por 100 g${f.unit?` · 1 ${f.unit.label} ≈ ${f.unit.g} g`:""}.</div>
+    <button class="btn btn-primary" style="margin-top:12px;" onclick="closeModal(); openAddFood('${addFoodMeal}'); pickFood('${f.id}')">+ Agregar a mi diario</button>
+    <button class="btn btn-outline" style="margin-top:8px;" onclick="toggleExcluir('${f.id}')">${excl?"↩︎ Volver a incluir":"🚫 No como esto"}</button>
+    <button class="btn btn-ghost" style="margin-top:8px;" onclick="closeModal()">Cerrar</button>
+  `;
+  $("#modal-overlay").classList.add("open");
+}
+function toggleExcluir(foodId){
+  const prefs = nutriPrefs();
+  const i = prefs.excluir.indexOf(foodId);
+  if (i === -1) prefs.excluir.push(foodId); else prefs.excluir.splice(i,1);
+  saveNutriPrefs({ excluir: prefs.excluir });
+  toast(i===-1 ? "Lo sacamos de tus menús 🚫" : "Lo volvimos a incluir ✅");
+  closeModal(); renderNutricion();
+}
+
+/* =========================================================
+   VISTA "PLAN" — metas + preferencias
+   ========================================================= */
+function viewNutriPerfil(n){
+  const prefs = nutriPrefs();
+  const kcalProt = n.prot*4, kcalCarbs = n.carbs*4, kcalGrasa = n.grasa*9;
+  const total = kcalProt+kcalCarbs+kcalGrasa || 1;
+  const pctP = Math.round(kcalProt/total*100), pctC = Math.round(kcalCarbs/total*100), pctG = Math.max(0,100-pctP-pctC);
+  const macro = (emoji,nombre,gr,kcal,pct,color)=>`
+    <div class="macro-row"><div class="macro-head"><span class="macro-name">${emoji} ${nombre}</span>
+      <span class="macro-g">${gr} g <span class="macro-kcal">· ${kcal} kcal</span></span></div>
+      <div class="macro-bar"><div class="macro-fill" style="width:${pct}%; background:${color};"></div></div></div>`;
+  const dietaOpts = Object.keys(DIETAS).map(k=>`<option value="${k}" ${prefs.dieta===k?"selected":""}>${DIETAS[k]}</option>`).join("");
+  const comidasOpts = [3,4,5].map(k=>`<option value="${k}" ${prefs.comidas===k?"selected":""}>${k} comidas</option>`).join("");
+  const excl = prefs.excluir.map(id=>{ const f=FOOD_BY_ID[id]; return f?`<span class="excl-chip" onclick="toggleExcluir('${id}')">${f.name} ✕</span>`:""; }).join("");
+
+  return `
     <div class="card nutri-hero">
       <div class="nutri-goal-label">Tu objetivo diario</div>
       <div class="nutri-kcal">${n.cal}<span>kcal</span></div>
       <div class="nutri-goal-sub">${OBJETIVO_LABEL[n.objetivo]} · ${n.ajusteTxt}</div>
     </div>
-
     <div class="card">
-      <div class="section-title" style="margin-top:0;">Reparto de macronutrientes</div>
-      ${macro("🥩", "Proteína", n.prot, kcalProt, pctP, "#e03131")}
-      ${macro("🍚", "Carbohidratos", n.carbs, kcalCarbs, pctC, "#f59f00")}
-      ${macro("🥑", "Grasas", n.grasa, kcalGrasa, pctG, "#40c057")}
-      <div class="disclaimer" style="margin-top:12px;">
-        Proteína calculada en <b>${n.protPerKg} g por kg</b> de peso — clave para construir y conservar músculo.
-      </div>
+      <div class="section-title" style="margin-top:0;">Reparto de macros</div>
+      ${macro("🥩","Proteína",n.prot,kcalProt,pctP,"#e03131")}
+      ${macro("🍚","Carbohidratos",n.carbs,kcalCarbs,pctC,"#f59f00")}
+      ${macro("🥑","Grasas",n.grasa,kcalGrasa,pctG,"#40c057")}
+      <div class="disclaimer" style="margin-top:12px;">Proteína en <b>${n.protPerKg} g/kg</b>. La meta se recalcula sola con tu objetivo, peso y días de rutina.</div>
     </div>
-
-    <div class="card nutri-tip">
-      <div class="nutri-tip-emoji">💡</div>
-      <div>${OBJETIVO_TIP[n.objetivo]}</div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Mis preferencias</div>
+      <div class="field"><label>Tipo de alimentación</label>
+        <select onchange="saveNutriPrefs({dieta:this.value}); renderNutricion();">${dietaOpts}</select></div>
+      <div class="field"><label>Comidas por día</label>
+        <select onchange="saveNutriPrefs({comidas:+this.value}); renderNutricion();">${comidasOpts}</select></div>
+      <label class="nutri-check"><input type="checkbox" ${prefs.sinTacc?"checked":""} onchange="saveNutriPrefs({sinTacc:this.checked}); renderNutricion();"> Sin TACC (celíaco)</label>
+      ${excl?`<div class="field" style="margin-top:10px;"><label>No como esto</label><div class="excl-list">${excl}</div></div>`:`<div class="disclaimer" style="margin-top:10px;">En <b>Alimentos</b> podés marcar los que no comés para que no aparezcan en tus menús.</div>`}
     </div>
-
+    <div class="card nutri-tip"><div class="nutri-tip-emoji">💡</div><div>${OBJETIVO_TIP[n.objetivo]}</div></div>
     <div class="card">
       <div class="section-title" style="margin-top:0;">Cómo lo calculamos</div>
       <div class="nutri-calc">
         <div class="nutri-calc-row"><span>Metabolismo basal (BMR)</span><b>${n.bmr} kcal</b></div>
-        <div class="nutri-calc-row"><span>Nivel de actividad (${n.dias} ${n.dias===1?"día":"días"}/sem)</span><b>${n.actNom}</b></div>
+        <div class="nutri-calc-row"><span>Actividad (${n.dias} ${n.dias===1?"día":"días"}/sem)</span><b>${n.actNom}</b></div>
         <div class="nutri-calc-row"><span>Gasto diario total (TDEE)</span><b>${n.tdee} kcal</b></div>
-        <div class="nutri-calc-row"><span>Ajuste por tu objetivo</span><b>${n.ajusteTxt}</b></div>
-        <div class="nutri-calc-row total"><span>Tu meta diaria</span><b>${n.cal} kcal</b></div>
+        <div class="nutri-calc-row total"><span>Meta diaria</span><b>${n.cal} kcal</b></div>
       </div>
-      <div class="disclaimer" style="margin-top:12px;">
-        Es una <b>estimación</b> con la fórmula Mifflin-St Jeor y valores estándar de actividad, no un plan médico ni nutricional personalizado.
-        Ajustá según tus resultados reales y, ante dudas o condiciones de salud, consultá con un profesional.
-        Cambiás tu objetivo, peso o días desde <b>Datos personales</b> y <b>Días de rutina</b>.
-      </div>
+      <div class="disclaimer" style="margin-top:12px;">Estimación (Mifflin-St Jeor). No reemplaza a un profesional de la nutrición.</div>
     </div>
   `;
 }
-

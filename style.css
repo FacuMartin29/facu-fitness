@@ -507,6 +507,124 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .nutri-calc-row.total span{ font-weight:800; color:var(--text); }
 .nutri-calc-row.total b{ color:var(--rojo); font-size:16px; }
 
+/* ===================== NUTRICIÓN — APP COMPLETA ===================== */
+/* Sub-navegación (pills) */
+.nsub-bar{ display:flex; gap:6px; overflow-x:auto; padding:2px 0 12px; margin:0 -2px; }
+.nsub-bar::-webkit-scrollbar{ display:none; }
+.nsub{
+  flex:0 0 auto; padding:8px 14px; border-radius:999px; border:1.5px solid var(--gris-200);
+  background:var(--surface); color:var(--gris-600); font-weight:800; font-size:13px; cursor:pointer;
+  transition: all .15s;
+}
+.nsub.active{ background:var(--rojo); border-color:var(--rojo); color:#fff; }
+
+/* --- Vista HOY: anillo + macros --- */
+.nutri-today{ display:flex; gap:16px; align-items:center; }
+.nt-ring{ position:relative; flex:0 0 auto; width:118px; height:118px; }
+.nutri-ring{ width:118px; height:118px; transform:rotate(-90deg); }
+.nr-track{ fill:none; stroke:var(--gris-100); stroke-width:10; }
+.nr-fill{ fill:none; stroke:var(--rojo); stroke-width:10; stroke-linecap:round; transition:stroke-dashoffset .5s ease; }
+.nr-fill.over{ stroke:#f59f00; }
+.nt-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.nt-rem{ font-size:26px; font-weight:900; color:var(--text); line-height:1; }
+.nt-rem-lbl{ font-size:10px; color:var(--gris-600); margin-top:2px; }
+.nt-macros{ flex:1; min-width:0; }
+.mm{ margin-bottom:9px; }
+.mm:last-of-type{ margin-bottom:0; }
+.mm-top{ display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:var(--gris-600); }
+.mm-top b{ color:var(--text); }
+.mm-bar{ height:7px; border-radius:999px; background:var(--gris-100); overflow:hidden; margin-top:3px; }
+.mm-fill{ height:100%; border-radius:999px; transition:width .4s; }
+.nt-eaten{ font-size:11px; color:var(--gris-400); margin-top:8px; }
+
+/* --- Tarjetas de comida (diario) --- */
+.meal-card{ padding:14px; }
+.meal-head{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:8px; }
+.meal-name{ font-size:15px; font-weight:800; color:var(--text); }
+.meal-target{ font-size:11px; color:var(--gris-400); font-weight:600; }
+.meal-kcal{ font-size:13px; font-weight:800; color:var(--rojo); white-space:nowrap; }
+.meal-empty{ font-size:12.5px; color:var(--gris-400); padding:6px 0; }
+.meal-add{ margin-top:8px; padding:9px; font-size:13px; }
+.diary-item{ display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--gris-100); }
+.diary-item:last-of-type{ border-bottom:none; }
+.di-main{ flex:1; min-width:0; }
+.di-name{ display:block; font-size:13.5px; font-weight:700; color:var(--text); }
+.di-sub{ display:block; font-size:11px; color:var(--gris-500); margin-top:1px; }
+.di-del{ flex:0 0 auto; border:none; background:var(--gris-100); color:var(--gris-600); width:26px; height:26px; border-radius:8px; cursor:pointer; font-size:12px; }
+
+/* --- Buscador de alimentos (modal + alimentos) --- */
+.nf-search{
+  width:100%; padding:12px 14px; border:1.5px solid var(--gris-200); border-radius:12px;
+  font-size:15px; background:var(--surface); color:var(--text); margin-bottom:10px;
+}
+.nf-search:focus{ outline:none; border-color:var(--rojo); }
+.nf-results{ max-height:52vh; overflow-y:auto; }
+.nf-cat, .alim-cat, .shop-cat{ font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--gris-400); margin:12px 0 4px; }
+.nf-row, .alim-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 4px; border-bottom:1px solid var(--gris-100); cursor:pointer; }
+.nf-left{ display:flex; align-items:center; gap:10px; min-width:0; }
+.nf-name{ font-size:14px; font-weight:700; color:var(--text); }
+.nf-sub{ font-size:11px; color:var(--gris-500); margin-top:1px; }
+.nf-add{ flex:0 0 auto; width:26px; height:26px; border-radius:8px; background:var(--rojo-suave); color:var(--rojo-oscuro); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; }
+.nf-label{ display:block; font-size:12px; font-weight:800; color:var(--gris-600); margin-bottom:6px; }
+.nf-qty{ display:flex; align-items:center; gap:10px; }
+.nf-qty input{ flex:1; padding:11px 12px; border:1.5px solid var(--gris-200); border-radius:12px; font-size:16px; background:var(--surface); color:var(--text); }
+.nf-qty input:focus{ outline:none; border-color:var(--rojo); }
+.nf-unit{ font-size:12px; color:var(--gris-500); white-space:nowrap; }
+.nf-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.nf-chip{ padding:7px 12px; border-radius:999px; border:1.5px solid var(--gris-200); background:var(--surface); color:var(--gris-700,var(--gris-800)); font-weight:700; font-size:12.5px; cursor:pointer; }
+.nf-chip:active{ transform:scale(.95); }
+.nf-preview{ margin-top:12px; padding:12px; border-radius:12px; background:var(--gris-100); font-size:14px; color:var(--gris-600); text-align:center; }
+.nf-preview b{ color:var(--text); font-size:18px; }
+
+/* Recetas (detalle) */
+.recipe-block{ margin-top:14px; }
+.recipe-h{ font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--gris-400); margin-bottom:6px; }
+.recipe-ul, .recipe-ol{ margin:0; padding-left:20px; font-size:13.5px; color:var(--gris-800); line-height:1.7; }
+
+/* --- Vista MENÚS --- */
+.menu-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.menu-meal{ padding:10px 0; border-bottom:1px solid var(--gris-100); cursor:pointer; }
+.menu-meal:last-of-type{ border-bottom:none; }
+.mm-label{ font-size:12px; font-weight:800; color:var(--gris-600); margin-bottom:4px; }
+.mm-tgt{ color:var(--gris-400); font-weight:600; }
+.mm-recipe{ display:flex; align-items:center; gap:10px; }
+.mm-emoji{ font-size:24px; flex:0 0 auto; }
+.mm-rname{ font-size:14.5px; font-weight:800; color:var(--text); }
+.mm-x{ color:var(--rojo); font-size:12px; }
+.mm-macros{ font-size:11.5px; color:var(--gris-500); margin-top:1px; }
+.menu-total{ margin-top:12px; padding-top:10px; border-top:2px solid var(--gris-100); font-size:13px; color:var(--gris-600); }
+.menu-total b{ color:var(--text); }
+.menu-goal{ color:var(--gris-400); }
+.recipe-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.recipe-card{ display:flex; align-items:center; gap:8px; padding:10px; border-radius:14px; background:var(--surface); border:1px solid var(--gris-100); cursor:pointer; }
+.rc-emoji{ font-size:22px; flex:0 0 auto; }
+.rc-info{ min-width:0; }
+.rc-name{ font-size:12.5px; font-weight:800; color:var(--text); line-height:1.2; }
+.rc-macros{ font-size:10.5px; color:var(--gris-500); margin-top:2px; }
+
+/* Lista de compras */
+.shop-item{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--gris-100); font-size:13.5px; color:var(--text); }
+.shop-item b{ color:var(--gris-600); }
+
+/* --- Vista ALIMENTOS --- */
+.sem-legend{ display:flex; gap:14px; font-size:12px; font-weight:700; color:var(--gris-600); margin-bottom:8px; flex-wrap:wrap; }
+.alim-list{ margin-top:4px; }
+.alim-sem{ flex:0 0 auto; font-size:10.5px; font-weight:800; padding:3px 9px; border-radius:999px; white-space:nowrap; }
+.sem-verde{ background:#e7f6ec; color:#1a7f37; }
+.sem-amarillo{ background:#fff4e0; color:#b26a00; }
+.sem-rojo{ background:#fdecec; color:#c62828; }
+.food-sem{ display:inline-block; font-size:12px; font-weight:800; padding:4px 12px; border-radius:999px; margin-bottom:12px; }
+.food-macros-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; text-align:center; }
+.food-macros-grid > div{ background:var(--gris-100); border-radius:12px; padding:10px 4px; }
+.food-macros-grid b{ display:block; font-size:18px; font-weight:800; color:var(--text); }
+.food-macros-grid span{ font-size:10px; color:var(--gris-500); }
+
+/* --- Vista PLAN: preferencias --- */
+.nutri-check{ display:flex; align-items:center; gap:10px; font-size:14px; font-weight:700; color:var(--text); cursor:pointer; margin-top:6px; }
+.nutri-check input{ width:18px; height:18px; accent-color:var(--rojo); }
+.excl-list{ display:flex; flex-wrap:wrap; gap:6px; }
+.excl-chip{ padding:6px 11px; border-radius:999px; background:#fdecec; color:#c62828; font-size:12px; font-weight:700; cursor:pointer; }
+
 /* ===================== VER OTRO DÍA (tira) ===================== */
 .upstrip{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin:0 -2px; scroll-snap-type:x proximity; }
 .upstrip::-webkit-scrollbar{ display:none; }

@@ -15,7 +15,7 @@ try {
 } catch (e) { console.warn("Supabase no disponible:", e); }
 
 /* Claves de datos que se sincronizan con la nube (mismas del backup) */
-const SYNC_KEYS = ["ff_profile","ff_trainingDays","ff_attendance","ff_makeups","ff_routineTypeLog","ff_focus","ff_swaps","ff_weightLog","ff_lifts","ff_measures"];
+const SYNC_KEYS = ["ff_profile","ff_trainingDays","ff_attendance","ff_makeups","ff_routineTypeLog","ff_focus","ff_swaps","ff_weightLog","ff_lifts","ff_measures","ff_nutriLog","ff_nutriMenu"];
 
 const authState = { email: "" };
 function authToast(m){ if (window.toast) toast(m); }
