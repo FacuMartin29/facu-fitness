@@ -577,8 +577,8 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .nf-preview b{ color:var(--text); font-size:18px; }
 
 /* Recetas (detalle) */
-.recipe-hero{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }
-.recipe-emoji-big{ font-size:38px; flex:0 0 auto; line-height:1; }
+.recipe-art{ display:block; width:100%; height:100%; }
+.recipe-photo{ width:100%; height:150px; border-radius:16px; overflow:hidden; }
 .recipe-moment{ font-size:12px; color:var(--gris-500); margin-top:3px; }
 .recipe-block{ margin-top:16px; }
 .recipe-h{ font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--gris-400); margin-bottom:8px; }
@@ -595,7 +595,7 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .mm-label{ font-size:12px; font-weight:800; color:var(--gris-600); margin-bottom:4px; }
 .mm-tgt{ color:var(--gris-400); font-weight:600; }
 .mm-recipe{ display:flex; align-items:center; gap:10px; }
-.mm-emoji{ font-size:24px; flex:0 0 auto; }
+.mm-thumb{ flex:0 0 auto; width:46px; height:46px; border-radius:12px; overflow:hidden; }
 .mm-rname{ font-size:14.5px; font-weight:800; color:var(--text); }
 .mm-x{ color:var(--rojo); font-size:12px; }
 .mm-macros{ font-size:11.5px; color:var(--gris-500); margin-top:1px; }
@@ -603,8 +603,8 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .menu-total b{ color:var(--text); }
 .menu-goal{ color:var(--gris-400); }
 .recipe-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.recipe-card{ display:flex; align-items:center; gap:8px; padding:10px; border-radius:14px; background:var(--surface); border:1px solid var(--gris-100); cursor:pointer; }
-.rc-emoji{ font-size:22px; flex:0 0 auto; }
+.recipe-card{ display:flex; align-items:center; gap:8px; padding:8px; border-radius:14px; background:var(--surface); border:1px solid var(--gris-100); cursor:pointer; }
+.rc-thumb{ flex:0 0 auto; width:42px; height:42px; border-radius:10px; overflow:hidden; }
 .rc-info{ min-width:0; }
 .rc-name{ font-size:12.5px; font-weight:800; color:var(--text); line-height:1.2; }
 .rc-macros{ font-size:10.5px; color:var(--gris-500); margin-top:2px; }

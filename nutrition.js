@@ -103,6 +103,26 @@ function recipeDiet(recipe){
   return { vegano:all(VG), vegetariano:all(V), sintacc:all(ST) };
 }
 
+/* ---------- Ilustración de plato (SVG) por receta ----------
+   Genera una tarjeta con degradé propio de cada receta + el emoji sobre un
+   "plato". Consistente, offline y sin riesgo legal (a diferencia de fotos
+   sueltas por plato). El color sale de un hash del id, así cada receta es
+   distinta pero estable. */
+function hashHue(s){ let h = 0; for (let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i)) >>> 0; return h % 360; }
+function recipeArt(r){
+  const hue = hashHue(r.id);
+  const c1 = `hsl(${hue} 68% 60%)`, c2 = `hsl(${(hue+38)%360} 70% 46%)`;
+  const gid = "rg-" + r.id;
+  return `<svg viewBox="0 0 120 90" class="recipe-art" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
+    <rect width="120" height="90" fill="url(#${gid})"/>
+    <circle cx="60" cy="45" r="27" fill="rgba(255,255,255,.20)"/>
+    <circle cx="60" cy="45" r="20" fill="rgba(255,255,255,.34)"/>
+    <text x="60" y="46" text-anchor="middle" dominant-baseline="central" font-size="30">${r.emoji||"🍽️"}</text>
+  </svg>`;
+}
+
 /* ---------- Filtros por dieta / restricciones ---------- */
 function foodAllowed(food, prefs){
   prefs = prefs || nutriPrefs();
@@ -332,13 +352,9 @@ function pickRecipe(recipeId, mult){
   const steps = (r.steps || []).map((s,i) => `<li>${esc(s)}</li>`).join("");
   const momentos = r.meals.map(m => mealLabel(m)).join(" · ");
   $("#modal-body").innerHTML = `
-    <div class="recipe-hero">
-      <div class="recipe-emoji-big">${r.emoji||"🍽️"}</div>
-      <div>
-        <div class="modal-title" style="margin:0;">${r.name}</div>
-        <div class="recipe-moment">Ideal para: ${momentos}</div>
-      </div>
-    </div>
+    <div class="recipe-photo">${recipeArt(r)}</div>
+    <div class="modal-title" style="margin:12px 0 2px;">${r.name}</div>
+    <div class="recipe-moment">Ideal para: ${momentos}</div>
     <div id="nf-prev" class="nf-preview"></div>
     <label class="nf-label" style="margin-top:14px;">Porciones</label>
     <div class="nf-chips">
@@ -429,7 +445,7 @@ function viewNutriMenus(n){
         <div class="menu-meal" onclick="pickRecipe('${r.id}', ${mm.mult})">
           <div class="mm-label">${mm.mealLabel} <span class="mm-tgt">~${mm.target} kcal</span></div>
           <div class="mm-recipe">
-            <span class="mm-emoji">${r.emoji||"🍽️"}</span>
+            <div class="mm-thumb">${recipeArt(r)}</div>
             <div class="mm-info"><div class="mm-rname">${r.name}${mm.mult!==1?` <span class="mm-x">×${mm.mult}</span>`:""}</div>
               <div class="mm-macros">${m.kcal} kcal · P${m.p} · C${m.c} · G${m.g}</div></div>
           </div>
@@ -461,7 +477,7 @@ function viewNutriMenus(n){
   const lib = recetas.map(r => {
     const m = recipeMacros(r);
     return `<div class="recipe-card" onclick="pickRecipe('${r.id}')">
-      <span class="rc-emoji">${r.emoji||"🍽️"}</span>
+      <div class="rc-thumb">${recipeArt(r)}</div>
       <div class="rc-info"><div class="rc-name">${r.name}</div><div class="rc-macros">${m.kcal} kcal · P${m.p}</div></div>
     </div>`;
   }).join("");
