@@ -258,6 +258,11 @@ function mealLabel(key){
   for (const n in MEAL_PLANS){ const f = MEAL_PLANS[n].find(m=>m.key===key); if (f) return f.label; }
   return "comida";
 }
+/* Plural en español: vocal final → +s, consonante → +es (unidad → unidades) */
+function pluralUnidad(label, n){
+  if (n <= 1) return label;
+  return /[aeiouáéíóú]$/i.test(label) ? label + "s" : label + "es";
+}
 function nfSearch(q){ const el = $("#nf-results"); if (el) el.innerHTML = nfResultsHTML(q); }
 function nfResultsHTML(q){
   const prefs = nutriPrefs();
@@ -317,38 +322,53 @@ function confirmAddFood(foodId){
   toast("Agregado al diario ✅");
   closeModal(); renderNutricion();
 }
-/* Receta: elegir porción */
-function pickRecipe(recipeId){
+/* Receta: vista completa (ingredientes en la cantidad real + paso a paso).
+   `mult` permite abrirla ya escalada (ej: desde un menú que dice ×1.8). */
+function pickRecipe(recipeId, mult){
   const r = RECIPE_BY_ID[recipeId]; if (!r) return;
-  const mm = recipeMacros(r);
-  const ingr = r.ingr.map(i => { const f=FOOD_BY_ID[i.f]; return `<li>${f?f.name:i.f} — ${i.g} g</li>`; }).join("");
-  const steps = (r.steps||[]).map(s=>`<li>${s}</li>`).join("");
+  mult = mult || 1;
+  window._nfRid = recipeId;
+  const nSteps = (r.steps || []).length;
+  const steps = (r.steps || []).map((s,i) => `<li>${esc(s)}</li>`).join("");
+  const momentos = r.meals.map(m => mealLabel(m)).join(" · ");
   $("#modal-body").innerHTML = `
-    <div class="modal-title">${r.emoji||"🍽️"} ${r.name}</div>
-    <div class="modal-desc" style="margin-bottom:8px;">Porción base: <b>${mm.kcal}</b> kcal · P${mm.p} · C${mm.c} · G${mm.g}</div>
-    <label class="nf-label">Porciones</label>
+    <div class="recipe-hero">
+      <div class="recipe-emoji-big">${r.emoji||"🍽️"}</div>
+      <div>
+        <div class="modal-title" style="margin:0;">${r.name}</div>
+        <div class="recipe-moment">Ideal para: ${momentos}</div>
+      </div>
+    </div>
+    <div id="nf-prev" class="nf-preview"></div>
+    <label class="nf-label" style="margin-top:14px;">Porciones</label>
     <div class="nf-chips">
       <button class="nf-chip" onclick="nfSetPortion(0.5)">½</button>
       <button class="nf-chip" onclick="nfSetPortion(1)">1</button>
       <button class="nf-chip" onclick="nfSetPortion(1.5)">1½</button>
       <button class="nf-chip" onclick="nfSetPortion(2)">2</button>
     </div>
-    <input id="nf-portion" type="hidden" value="1">
-    <div id="nf-prev" class="nf-preview"></div>
-    <div class="recipe-block"><div class="recipe-h">Ingredientes</div><ul class="recipe-ul">${ingr}</ul></div>
-    ${steps?`<div class="recipe-block"><div class="recipe-h">Preparación</div><ol class="recipe-ol">${steps}</ol></div>`:""}
+    <input id="nf-portion" type="hidden" value="${mult}">
+    <div class="recipe-block"><div class="recipe-h">🧾 Ingredientes</div><ul id="nf-ingr" class="recipe-ul"></ul></div>
+    ${nSteps ? `<div class="recipe-block"><div class="recipe-h">👩‍🍳 Preparación (${nSteps} pasos)</div><ol class="recipe-ol">${steps}</ol></div>` : ""}
     <button class="btn btn-primary" style="margin-top:12px;" onclick="confirmAddRecipe('${recipeId}')">Agregar al diario</button>
-    <button class="btn btn-ghost" style="margin-top:8px;" onclick="openAddFood('${addFoodMeal}')">‹ Volver</button>
+    <button class="btn btn-ghost" style="margin-top:8px;" onclick="closeModal()">Cerrar</button>
   `;
-  window._nfRid = recipeId;
-  nfSetPortion(1);
+  $("#modal-overlay").classList.add("open");
+  nfSetPortion(mult);
 }
 function nfSetPortion(p){
   const inp = $("#nf-portion"); if (inp) inp.value = p;
   const r = RECIPE_BY_ID[window._nfRid]; if (!r) return;
   const m = recipeMacros(r, p);
-  const el = $("#nf-prev");
-  if (el) el.innerHTML = `<b>${m.kcal}</b> kcal · P ${m.p} · C ${m.c} · G ${m.g}`;
+  const prev = $("#nf-prev");
+  if (prev) prev.innerHTML = `<b>${m.kcal}</b> kcal · P ${m.p} · C ${m.c} · G ${m.g}`;
+  const ing = $("#nf-ingr");
+  if (ing) ing.innerHTML = r.ingr.map(i => {
+    const f = FOOD_BY_ID[i.f]; const g = Math.round(i.g * p);
+    let u = "";
+    if (f && f.unit && g >= f.unit.g){ const n = Math.round(g / f.unit.g); u = ` <span class="ingr-unit">(≈ ${n} ${pluralUnidad(f.unit.label, n)})</span>`; }
+    return `<li>${f ? esc(f.name) : i.f} — <b>${g} g</b>${u}</li>`;
+  }).join("");
 }
 function confirmAddRecipe(recipeId){
   const r = RECIPE_BY_ID[recipeId]; const mult = +($("#nf-portion").value||1);
@@ -406,7 +426,7 @@ function viewNutriMenus(n){
       const m = recipeMacros(r, mm.mult);
       tot.kcal+=m.kcal; tot.p+=m.p; tot.c+=m.c; tot.g+=m.g;
       return `
-        <div class="menu-meal" onclick="pickRecipe('${r.id}')">
+        <div class="menu-meal" onclick="pickRecipe('${r.id}', ${mm.mult})">
           <div class="mm-label">${mm.mealLabel} <span class="mm-tgt">~${mm.target} kcal</span></div>
           <div class="mm-recipe">
             <span class="mm-emoji">${r.emoji||"🍽️"}</span>

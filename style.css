@@ -577,9 +577,16 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .nf-preview b{ color:var(--text); font-size:18px; }
 
 /* Recetas (detalle) */
-.recipe-block{ margin-top:14px; }
-.recipe-h{ font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--gris-400); margin-bottom:6px; }
-.recipe-ul, .recipe-ol{ margin:0; padding-left:20px; font-size:13.5px; color:var(--gris-800); line-height:1.7; }
+.recipe-hero{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.recipe-emoji-big{ font-size:38px; flex:0 0 auto; line-height:1; }
+.recipe-moment{ font-size:12px; color:var(--gris-500); margin-top:3px; }
+.recipe-block{ margin-top:16px; }
+.recipe-h{ font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--gris-400); margin-bottom:8px; }
+.recipe-ul, .recipe-ol{ margin:0; padding-left:22px; font-size:14px; color:var(--gris-800); line-height:1.8; }
+.recipe-ol li{ margin-bottom:6px; padding-left:4px; }
+.recipe-ul li{ margin-bottom:3px; }
+.recipe-ul b{ color:var(--text); }
+.ingr-unit{ color:var(--gris-400); font-size:12px; }
 
 /* --- Vista MENÚS --- */
 .menu-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
