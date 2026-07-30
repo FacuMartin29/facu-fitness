@@ -508,38 +508,80 @@ function stopScanner(){ try { if (_bcReader) _bcReader.reset(); } catch(e){} _bc
 function closeScanner(){ stopScanner(); closeModal(); }
 function setScanStatus(t){ const el = $("#scan-status"); if (el) el.textContent = t; }
 
+/* Extrae un valor "por 100 g" probando varias formas en que OFF guarda los datos */
+function offVal(nm, base, sq){
+  if (nm[base+"_100g"] != null) return +nm[base+"_100g"];
+  if (nm[base+"_serving"] != null && sq) return +nm[base+"_serving"] / sq * 100;
+  if (nm[base] != null) return +nm[base];
+  return 0;
+}
+function offKcal(nm, sq){
+  if (nm["energy-kcal_100g"] != null) return +nm["energy-kcal_100g"];
+  if (nm["energy-kcal_serving"] != null && sq) return +nm["energy-kcal_serving"] / sq * 100;
+  if (nm["energy-kcal"] != null) return +nm["energy-kcal"];
+  if (nm["energy-kcal_value"] != null) return +nm["energy-kcal_value"];
+  if (nm["energy_100g"] != null) return +nm["energy_100g"] / 4.184;      // kJ -> kcal
+  if (nm["energy-kj_100g"] != null) return +nm["energy-kj_100g"] / 4.184;
+  return 0;
+}
 async function lookupBarcode(code){
   code = (code||"").trim();
   if (!/^\d{6,14}$/.test(code)){ setScanStatus("Ese código no parece válido 🤔"); return; }
   stopScanner();
   setScanStatus("Buscando el producto…");
   try {
-    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,nutriments`);
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,product_name_es,brands,nutriments,serving_quantity`);
     const data = await res.json();
-    if (!data || data.status !== 1 || !data.product){ showBarcodeNotFound(code); return; }
-    const p = data.product, nm = p.nutriments || {};
-    let kcal = nm["energy-kcal_100g"];
-    if (kcal == null && nm["energy_100g"] != null) kcal = nm["energy_100g"] / 4.184; // kJ -> kcal
+    const p = (data && data.product) || null;
+    const nombre = p ? (p.product_name_es || p.product_name || "").trim() : "";
+    if (!data || data.status !== 1 || !p){ showManualProduct(code, ""); return; }
+    const nm = p.nutriments || {}; const sq = +p.serving_quantity || 0;
     const prod = {
-      code, name: (p.product_name || "Producto").trim(), brand: (p.brands||"").split(",")[0].trim(),
-      kcal: Math.round(kcal || 0),
-      p: Math.round((nm.proteins_100g||0)*10)/10,
-      c: Math.round((nm.carbohydrates_100g||0)*10)/10,
-      g: Math.round((nm.fat_100g||0)*10)/10,
+      code, name: nombre || "Producto", brand: (p.brands||"").split(",")[0].trim(),
+      kcal: Math.round(offKcal(nm, sq)),
+      p: Math.round(offVal(nm,"proteins",sq)*10)/10,
+      c: Math.round(offVal(nm,"carbohydrates",sq)*10)/10,
+      g: Math.round(offVal(nm,"fat",sq)*10)/10,
     };
-    if (!prod.kcal && !prod.p && !prod.c && !prod.g){ showBarcodeNotFound(code, true); return; }
+    // Sin ningún dato nutricional -> carga manual (con el nombre ya cargado)
+    if (!prod.kcal && !prod.p && !prod.c && !prod.g){ showManualProduct(code, nombre); return; }
     showScannedProduct(prod);
-  } catch(e){ setScanStatus("Sin conexión para buscar el producto. Probá de nuevo."); }
+  } catch(e){
+    // Sin conexión: si estábamos escaneando, avisamos; si no, ofrecemos carga manual
+    if ($("#scan-status")) setScanStatus("Sin conexión para buscar. Probá de nuevo o cargalo a mano 👇");
+    else showManualProduct(code, "");
+  }
 }
-function showBarcodeNotFound(code, sinDatos){
+/* Cuando OFF no tiene datos: cargar los de la etiqueta a mano (nunca queda bloqueado) */
+function showManualProduct(code, name){
   $("#modal-body").innerHTML = `
-    <div class="modal-title">${sinDatos?"Producto sin datos":"Producto no encontrado"}</div>
-    <div class="modal-desc" style="margin-bottom:12px;">${sinDatos
-      ? `El código <b>${esc(code)}</b> existe pero no tiene info nutricional cargada en Open Food Facts.`
-      : `El código <b>${esc(code)}</b> no está en la base de Open Food Facts.`} Podés buscarlo por nombre en nuestra base.</div>
-    <button class="btn btn-primary" onclick="openAddFood('${addFoodMeal}')">Buscar por nombre</button>
-    <button class="btn btn-ghost" style="margin-top:8px;" onclick="closeModal()">Cerrar</button>
+    <div class="modal-title">Cargar de la etiqueta</div>
+    <div class="modal-desc" style="margin-bottom:12px;">${name?`<b>${esc(name)}</b>. `:""}No encontramos su info nutricional. Copiá los valores <b>por 100 g</b> del envase 👇</div>
+    <input id="man-name" class="nf-search" placeholder="Nombre del producto" value="${esc(name||"")}" style="margin-bottom:10px;">
+    <div class="man-grid">
+      <div class="field"><label>Calorías (kcal)</label><input id="man-kcal" type="number" inputmode="numeric" placeholder="0"></div>
+      <div class="field"><label>Proteína (g)</label><input id="man-p" type="number" inputmode="decimal" placeholder="0"></div>
+      <div class="field"><label>Carbohidratos (g)</label><input id="man-c" type="number" inputmode="decimal" placeholder="0"></div>
+      <div class="field"><label>Grasas (g)</label><input id="man-g" type="number" inputmode="decimal" placeholder="0"></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:14px;" onclick="saveManualProduct('${code}')">Continuar</button>
+    <button class="btn btn-outline" style="margin-top:8px;" onclick="openAddFood('${addFoodMeal}')">Mejor buscar por nombre</button>
+    <button class="btn btn-ghost" style="margin-top:8px;" onclick="closeModal()">Cancelar</button>
   `;
+  $("#modal-overlay").classList.add("open");
+  setTimeout(()=>{ const i=$("#man-name"); if(i && !i.value) i.focus(); }, 60);
+}
+function saveManualProduct(code){
+  const kcal = +($("#man-kcal").value||0);
+  if (!kcal){ toast("Poné al menos las calorías de la etiqueta"); return; }
+  const prod = {
+    code, name: ($("#man-name").value||"Producto").trim(), brand:"",
+    kcal: Math.round(kcal),
+    p: Math.round((+($("#man-p").value||0))*10)/10,
+    c: Math.round((+($("#man-c").value||0))*10)/10,
+    g: Math.round((+($("#man-g").value||0))*10)/10,
+  };
+  showScannedProduct(prod);
 }
 function showScannedProduct(prod){
   window._scanned = prod;

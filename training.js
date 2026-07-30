@@ -136,6 +136,20 @@ function findSplitEntryByKey(key){
   return all.find(s => s.key === key) || null;
 }
 
+/* Ancla de rotación vigente para una fecha (la más reciente con from <= fecha) */
+function getSplitAnchor(dateStr){
+  const anchors = (State.splitAnchors() || []).slice().sort((a,b)=>a.from.localeCompare(b.from));
+  let a = null;
+  for (const e of anchors){ if (e.from <= dateStr) a = e; }
+  return a;
+}
+/* Cuenta los días de entrenamiento en [fromStr, toStrExcl) */
+function countTrainingDaysInRange(fromStr, toStrExcl, days){
+  let c = 0, d = parseDate(fromStr); const end = parseDate(toStrExcl);
+  while (d < end){ if (days.indexOf(d.getDay()) !== -1) c++; d.setDate(d.getDate()+1); }
+  return c;
+}
+
 /* Devuelve el tipo de día (objeto split) para una fecha dada, o null si es descanso */
 function getDayTypeForDate(dateStr){
   const makeups = State.makeups();
@@ -152,9 +166,62 @@ function getDayTypeForDate(dateStr){
   const type = getRoutineTypeForDate(dateStr);
   const split = getSplitFor(type, days.length);
   if (!split.length) return null;
-  // Si entrenás más días que largo del split, la división se repite en ciclo
-  // para que TODOS los días tengan rutina (hasta los 7 días de la semana).
+
+  // Si hay un ancla (cambiaste los músculos de un día), la rotación arranca de esa
+  // "key" en la fecha del ancla y avanza un paso por cada día de entrenamiento.
+  const anchor = getSplitAnchor(dateStr);
+  if (anchor){
+    const base = split.findIndex(s => s.key === anchor.key);
+    const start = base === -1 ? 0 : base;
+    const p = countTrainingDaysInRange(anchor.from, dateStr, days);
+    return { ...split[(start + p) % split.length], repuesto: false };
+  }
+  // Sin ancla: patrón semanal fijo por posición del día dentro de la semana.
   return { ...split[idx % split.length], repuesto: false };
+}
+
+/* =========================================================
+   CAMBIAR LOS MÚSCULOS DE HOY (desde Inicio)
+   ========================================================= */
+function openMuscleChange(){
+  const today = todayStr();
+  const days = State.trainingDays();
+  const type = getRoutineTypeForDate(today);
+  const split = getSplitFor(type, days.length) || [];
+  const current = (getDayTypeForDate(today) || {}).key;
+  const rows = split.map(s => `
+    <div class="exercise-row" onclick="applyMuscleChange('${s.key}')">
+      <div class="exercise-left"><div>
+        <div class="exercise-name">${s.label}</div>
+        <div class="exercise-equip">${s.corto}</div>
+      </div></div>
+      <div class="exercise-sr" style="${s.key===current ? "" : "background:var(--gris-100);color:var(--gris-600);"}">${s.key===current ? "Hoy" : "Elegir"}</div>
+    </div>`).join("");
+  const anchoredToday = (State.splitAnchors() || []).some(a => a.from === today);
+  $("#modal-body").innerHTML = `
+    <div class="modal-title">¿Qué querés entrenar hoy?</div>
+    <div class="modal-desc">Elegí el grupo. Cambiamos la rutina de hoy y <b>corremos los días siguientes</b> para que no repitas y no pierdas ningún músculo.</div>
+    <div style="max-height:52vh; overflow-y:auto; margin-bottom:8px;">${rows}</div>
+    ${anchoredToday ? `<button class="btn btn-outline" onclick="revertMuscleChange()">↩︎ Volver a la rutina programada</button>` : ""}
+    <button class="btn btn-ghost" style="margin-top:8px;" onclick="closeModal()">Cancelar</button>
+  `;
+  $("#modal-overlay").classList.add("open");
+}
+function applyMuscleChange(key){
+  const today = todayStr();
+  const anchors = (State.splitAnchors() || []).filter(a => a.from !== today);
+  anchors.push({ from: today, key });
+  State.saveSplitAnchors(anchors);
+  closeModal();
+  toast("Rutina de hoy actualizada 💪");
+  renderHome();
+}
+function revertMuscleChange(){
+  const today = todayStr();
+  State.saveSplitAnchors((State.splitAnchors() || []).filter(a => a.from !== today));
+  closeModal();
+  toast("Volviste a la rutina programada");
+  renderHome();
 }
 
 /* Elige N ejercicios de un grupo muscular rotando según semana ISO, para variar la rutina */

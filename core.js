@@ -4,7 +4,7 @@
    ========================================================= */
 /* Version de la app (se sube junto con el cache del service worker). Sirve para
    saber con qué versión se envió cada opinión en la encuesta. */
-const APP_VERSION = "v40";
+const APP_VERSION = "v41";
 
 const DIAS_NOMBRE = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 const DIAS_CORTO  = ["D","L","M","X","J","V","S"];
@@ -90,6 +90,12 @@ const State = {
 
   weightLog(){ return Store.get("ff_weightLog", []); },
   saveWeightLog(arr){ Store.set("ff_weightLog", arr); },
+
+  /* Anclas de rotación del split: [{from:"YYYY-MM-DD", key:"A"}]. Cuando cambiás
+     los músculos de un día, ese día toma esa "key" y los días siguientes rotan
+     a partir de ahí (así no repetís y no perdés ningún grupo). */
+  splitAnchors(){ return Store.get("ff_splitAnchors", []); },
+  saveSplitAnchors(arr){ Store.set("ff_splitAnchors", arr); },
 };
 
 /* Valores por defecto de objetivo/nivel si el perfil no los tiene aún */

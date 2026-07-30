@@ -57,6 +57,7 @@ function renderHome(){
         <span>🏋️ <b>${plan.exercises.length}</b> ejercicios</span>
         <span>⏱️ <b>~${estimateSessionMinutes(plan)}</b> min</span>
       </div>
+      ${!plan.dayType.repuesto ? `<button class="hero-change" onclick="openMuscleChange()">🔄 Cambiar los músculos de hoy</button>` : ""}
     </div>`;
 
   if (plan.cardio){
