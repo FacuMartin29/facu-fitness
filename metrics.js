@@ -306,6 +306,8 @@ function renderMetricas(){
 
     ${buildPRCard()}
 
+    ${typeof buildNutriMetricsCard === "function" ? buildNutriMetricsCard() : ""}
+
     <div class="card">
       <div class="section-title" style="margin-top:0;">Índice de Masa Corporal</div>
       <div class="imc-bar"><div class="imc-marker" style="left:${imcPos}%;"></div></div>

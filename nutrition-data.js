@@ -109,6 +109,110 @@ const FOODS = [
   // ---------- SUPLEMENTOS ----------
   { id:"whey",      name:"Proteína whey",        cat:"suple",    kcal:370, p:80, c:8,  g:6,   sem:"verde",    tags:[V,ST], unit:{label:"scoop", g:30} },
   { id:"caseina",   name:"Proteína vegetal",     cat:"suple",    kcal:375, p:75, c:9,  g:6,   sem:"verde",    tags:[V,VG,ST], unit:{label:"scoop", g:30} },
+  { id:"barrita_prot",name:"Barrita proteica",   cat:"suple",    kcal:350, p:33, c:40, g:9,   sem:"verde",    tags:[V], unit:{label:"barrita", g:50} },
+  { id:"creatina",  name:"Creatina",             cat:"suple",    kcal:0,   p:0,  c:0,  g:0,   sem:"verde",    tags:[V,VG,ST], unit:{label:"cucharadita", g:5} },
+
+  // ---------- MÁS PROTEÍNAS / FIAMBRES ----------
+  { id:"pavita",    name:"Pechuga de pavita",    cat:"proteina", kcal:135, p:29, c:0,  g:1.7, sem:"verde",    tags:[ST] },
+  { id:"peceto",    name:"Peceto",               cat:"proteina", kcal:150, p:22, c:0,  g:6,   sem:"verde",    tags:[ST] },
+  { id:"camaron",   name:"Camarones",            cat:"proteina", kcal:99,  p:24, c:0.2,g:0.3, sem:"verde",    tags:[ST] },
+  { id:"sardina",   name:"Sardinas (lata)",      cat:"proteina", kcal:208, p:24, c:0,  g:11,  sem:"amarillo", tags:[ST] },
+  { id:"jamon_coc", name:"Jamón cocido",         cat:"proteina", kcal:145, p:18, c:1.5,g:7,   sem:"amarillo", tags:[ST] },
+  { id:"jamon_cru", name:"Jamón crudo",          cat:"proteina", kcal:195, p:25, c:0,  g:10,  sem:"amarillo", tags:[ST] },
+  { id:"bondiola",  name:"Bondiola de cerdo",    cat:"proteina", kcal:250, p:18, c:0,  g:19,  sem:"amarillo", tags:[ST] },
+  { id:"hamburguesa",name:"Hamburguesa (medallón)",cat:"proteina",kcal:250,p:17, c:3,  g:19,  sem:"rojo",     tags:[], unit:{label:"medallón", g:80} },
+  { id:"salchicha", name:"Salchicha",            cat:"proteina", kcal:300, p:12, c:2,  g:27,  sem:"rojo",     tags:[], unit:{label:"unidad", g:45} },
+  { id:"mortadela", name:"Mortadela",            cat:"proteina", kcal:311, p:16, c:3,  g:26,  sem:"rojo",     tags:[] },
+  { id:"mila_soja", name:"Milanesa de soja",     cat:"proteina", kcal:200, p:16, c:18, g:7,   sem:"amarillo", tags:[V,VG], unit:{label:"unidad", g:80} },
+
+  // ---------- MÁS LÁCTEOS ----------
+  { id:"leche_ent", name:"Leche entera",         cat:"lacteo",   kcal:61,  p:3.2,c:4.8,g:3.3, sem:"amarillo", tags:[V,ST], unit:{label:"vaso", g:200} },
+  { id:"yog_beb",   name:"Yogur bebible",        cat:"lacteo",   kcal:71,  p:2.8,c:12, g:1.5, sem:"amarillo", tags:[V,ST], unit:{label:"botellita", g:200} },
+  { id:"muzza",     name:"Muzzarella",           cat:"lacteo",   kcal:280, p:22, c:2.2,g:22,  sem:"amarillo", tags:[V,ST] },
+  { id:"q_cremoso", name:"Queso cremoso",        cat:"lacteo",   kcal:273, p:18, c:3,  g:21,  sem:"amarillo", tags:[V,ST] },
+  { id:"provolone", name:"Provolone",            cat:"lacteo",   kcal:351, p:25, c:2,  g:27,  sem:"amarillo", tags:[V,ST] },
+  { id:"crema",     name:"Crema de leche",       cat:"lacteo",   kcal:292, p:2.5,c:3,  g:30,  sem:"rojo",     tags:[V,ST], unit:{label:"cucharada", g:15} },
+  { id:"flan",      name:"Flan",                 cat:"lacteo",   kcal:145, p:4,  c:22, g:4,   sem:"amarillo", tags:[V,ST], unit:{label:"porción", g:100} },
+  { id:"ddl_light", name:"Dulce de leche light", cat:"lacteo",   kcal:265, p:7,  c:50, g:4,   sem:"amarillo", tags:[V,ST], unit:{label:"cucharada", g:20} },
+
+  // ---------- MÁS CARBOS ----------
+  { id:"pan_lactal",name:"Pan lactal",           cat:"carbo",    kcal:265, p:9,  c:49, g:4,   sem:"amarillo", tags:[V,VG], unit:{label:"rebanada", g:25} },
+  { id:"fideos_int",name:"Fideos integrales",    cat:"carbo",    kcal:124, p:5,  c:26, g:0.8, sem:"verde",    tags:[V,VG] },
+  { id:"noquis",    name:"Ñoquis",               cat:"carbo",    kcal:160, p:3.5,c:33, g:1,   sem:"amarillo", tags:[V] },
+  { id:"cuscus",    name:"Cuscús cocido",        cat:"carbo",    kcal:112, p:3.8,c:23, g:0.2, sem:"amarillo", tags:[V,VG] },
+  { id:"granola",   name:"Granola",              cat:"carbo",    kcal:471, p:10, c:64, g:20,  sem:"amarillo", tags:[V,VG] },
+  { id:"empanada",  name:"Empanada de carne",    cat:"carbo",    kcal:260, p:9,  c:28, g:12,  sem:"rojo",     tags:[], unit:{label:"unidad", g:100} },
+  { id:"pizza",     name:"Pizza de muzzarella",  cat:"carbo",    kcal:266, p:11, c:33, g:10,  sem:"rojo",     tags:[V], unit:{label:"porción", g:120} },
+  { id:"tarta_verd",name:"Tarta de verdura",     cat:"carbo",    kcal:200, p:7,  c:18, g:11,  sem:"amarillo", tags:[V], unit:{label:"porción", g:150} },
+
+  // ---------- MÁS LEGUMBRES ----------
+  { id:"soja",      name:"Porotos de soja",      cat:"legumbre", kcal:173, p:17, c:10, g:9,   sem:"verde",    tags:[V,VG,ST] },
+  { id:"edamame",   name:"Edamame",              cat:"legumbre", kcal:121, p:11, c:9,  g:5,   sem:"verde",    tags:[V,VG,ST] },
+  { id:"habas",     name:"Habas cocidas",        cat:"legumbre", kcal:110, p:8,  c:20, g:0.4, sem:"verde",    tags:[V,VG,ST] },
+  { id:"hummus",    name:"Hummus",               cat:"legumbre", kcal:177, p:8,  c:20, g:8,   sem:"amarillo", tags:[V,VG,ST], unit:{label:"cucharada", g:25} },
+  { id:"arvejas",   name:"Arvejas",              cat:"legumbre", kcal:81,  p:5.4,c:14, g:0.4, sem:"verde",    tags:[V,VG,ST] },
+
+  // ---------- MÁS VERDURAS ----------
+  { id:"pepino",    name:"Pepino",               cat:"verdura",  kcal:15,  p:0.7,c:3.6,g:0.1, sem:"verde",    tags:[V,VG,ST] },
+  { id:"apio",      name:"Apio",                 cat:"verdura",  kcal:16,  p:0.7,c:3,  g:0.2, sem:"verde",    tags:[V,VG,ST] },
+  { id:"remolacha", name:"Remolacha",            cat:"verdura",  kcal:43,  p:1.6,c:10, g:0.2, sem:"verde",    tags:[V,VG,ST] },
+  { id:"choclo",    name:"Choclo (maíz)",        cat:"verdura",  kcal:96,  p:3.4,c:21, g:1.5, sem:"amarillo", tags:[V,VG,ST] },
+  { id:"chaucha",   name:"Chauchas",             cat:"verdura",  kcal:31,  p:1.8,c:7,  g:0.1, sem:"verde",    tags:[V,VG,ST] },
+  { id:"berenjena", name:"Berenjena",            cat:"verdura",  kcal:25,  p:1,  c:6,  g:0.2, sem:"verde",    tags:[V,VG,ST] },
+  { id:"zapallito", name:"Zapallito / zucchini", cat:"verdura",  kcal:17,  p:1.2,c:3.1,g:0.3, sem:"verde",    tags:[V,VG,ST] },
+  { id:"coliflor",  name:"Coliflor",             cat:"verdura",  kcal:25,  p:1.9,c:5,  g:0.3, sem:"verde",    tags:[V,VG,ST] },
+  { id:"repollo",   name:"Repollo",              cat:"verdura",  kcal:25,  p:1.3,c:6,  g:0.1, sem:"verde",    tags:[V,VG,ST] },
+  { id:"rucula",    name:"Rúcula",               cat:"verdura",  kcal:25,  p:2.6,c:3.7,g:0.7, sem:"verde",    tags:[V,VG,ST] },
+  { id:"acelga",    name:"Acelga",               cat:"verdura",  kcal:19,  p:1.8,c:3.7,g:0.2, sem:"verde",    tags:[V,VG,ST] },
+  { id:"palmito",   name:"Palmitos",             cat:"verdura",  kcal:28,  p:2.5,c:4.5,g:0.6, sem:"verde",    tags:[V,VG,ST] },
+
+  // ---------- MÁS FRUTAS ----------
+  { id:"uva",       name:"Uva",                  cat:"fruta",    kcal:69,  p:0.7,c:18, g:0.2, sem:"verde",    tags:[V,VG,ST] },
+  { id:"durazno",   name:"Durazno",              cat:"fruta",    kcal:39,  p:0.9,c:10, g:0.3, sem:"verde",    tags:[V,VG,ST], unit:{label:"unidad", g:150} },
+  { id:"ciruela",   name:"Ciruela",              cat:"fruta",    kcal:46,  p:0.7,c:11, g:0.3, sem:"verde",    tags:[V,VG,ST], unit:{label:"unidad", g:66} },
+  { id:"kiwi",      name:"Kiwi",                 cat:"fruta",    kcal:61,  p:1.1,c:15, g:0.5, sem:"verde",    tags:[V,VG,ST], unit:{label:"unidad", g:75} },
+  { id:"anana",     name:"Ananá",                cat:"fruta",    kcal:50,  p:0.5,c:13, g:0.1, sem:"verde",    tags:[V,VG,ST] },
+  { id:"sandia",    name:"Sandía",               cat:"fruta",    kcal:30,  p:0.6,c:8,  g:0.2, sem:"verde",    tags:[V,VG,ST] },
+  { id:"melon",     name:"Melón",                cat:"fruta",    kcal:34,  p:0.8,c:8,  g:0.2, sem:"verde",    tags:[V,VG,ST] },
+  { id:"mandarina", name:"Mandarina",            cat:"fruta",    kcal:53,  p:0.8,c:13, g:0.3, sem:"verde",    tags:[V,VG,ST], unit:{label:"unidad", g:90} },
+  { id:"mango",     name:"Mango",                cat:"fruta",    kcal:60,  p:0.8,c:15, g:0.4, sem:"verde",    tags:[V,VG,ST] },
+  { id:"higo",      name:"Higo",                 cat:"fruta",    kcal:74,  p:0.8,c:19, g:0.3, sem:"verde",    tags:[V,VG,ST] },
+  { id:"pomelo",    name:"Pomelo",               cat:"fruta",    kcal:42,  p:0.8,c:11, g:0.1, sem:"verde",    tags:[V,VG,ST], unit:{label:"unidad", g:200} },
+  { id:"pasas",     name:"Pasas de uva",         cat:"fruta",    kcal:299, p:3.1,c:79, g:0.5, sem:"amarillo", tags:[V,VG,ST], unit:{label:"puñado", g:30} },
+
+  // ---------- MÁS GRASAS Y FRUTOS SECOS ----------
+  { id:"aceite_gir",name:"Aceite de girasol",    cat:"grasa",    kcal:884, p:0,  c:0,  g:100, sem:"amarillo", tags:[V,VG,ST], unit:{label:"cucharada", g:10} },
+  { id:"manteca",   name:"Manteca",              cat:"grasa",    kcal:717, p:0.9,c:0.1,g:81,  sem:"rojo",     tags:[V,ST], unit:{label:"cucharada", g:10} },
+  { id:"mayonesa",  name:"Mayonesa",             cat:"grasa",    kcal:680, p:1,  c:2,  g:75,  sem:"rojo",     tags:[V,ST], unit:{label:"cucharada", g:15} },
+  { id:"aceitunas", name:"Aceitunas",            cat:"grasa",    kcal:115, p:0.8,c:6,  g:11,  sem:"amarillo", tags:[V,VG,ST] },
+  { id:"lino",      name:"Semillas de lino",     cat:"grasa",    kcal:534, p:18, c:29, g:42,  sem:"verde",    tags:[V,VG,ST], unit:{label:"cucharada", g:12} },
+  { id:"sem_girasol",name:"Semillas de girasol", cat:"grasa",    kcal:584, p:21, c:20, g:51,  sem:"amarillo", tags:[V,VG,ST], unit:{label:"puñado", g:20} },
+  { id:"caju",      name:"Castañas de cajú",     cat:"grasa",    kcal:553, p:18, c:30, g:44,  sem:"amarillo", tags:[V,VG,ST], unit:{label:"puñado", g:20} },
+  { id:"pistacho",  name:"Pistachos",            cat:"grasa",    kcal:560, p:20, c:28, g:45,  sem:"amarillo", tags:[V,VG,ST], unit:{label:"puñado", g:20} },
+  { id:"coco",      name:"Coco rallado",         cat:"grasa",    kcal:660, p:6.9,c:24, g:64,  sem:"amarillo", tags:[V,VG,ST], unit:{label:"cucharada", g:10} },
+
+  // ---------- MÁS SNACKS Y DULCES ----------
+  { id:"barra_cereal",name:"Barra de cereal",    cat:"snack",    kcal:420, p:6,  c:70, g:12,  sem:"amarillo", tags:[V], unit:{label:"barra", g:25} },
+  { id:"helado",    name:"Helado de crema",      cat:"snack",    kcal:207, p:3.5,c:24, g:11,  sem:"rojo",     tags:[V,ST], unit:{label:"bocha", g:60} },
+  { id:"alfajor",   name:"Alfajor",              cat:"snack",    kcal:450, p:5,  c:60, g:21,  sem:"rojo",     tags:[V], unit:{label:"unidad", g:45} },
+  { id:"turron",    name:"Turrón de maní",       cat:"snack",    kcal:480, p:12, c:50, g:26,  sem:"rojo",     tags:[V], unit:{label:"unidad", g:25} },
+  { id:"choco_leche",name:"Chocolate con leche", cat:"snack",    kcal:535, p:7.7,c:59, g:30,  sem:"rojo",     tags:[V,ST] },
+  { id:"budin",     name:"Budín",                cat:"snack",    kcal:380, p:5,  c:55, g:15,  sem:"rojo",     tags:[V], unit:{label:"porción", g:60} },
+  { id:"gall_agua", name:"Galletas de agua",     cat:"snack",    kcal:420, p:10, c:72, g:9,   sem:"amarillo", tags:[V,VG], unit:{label:"unidad", g:6} },
+  { id:"pochoclo",  name:"Pochoclo",             cat:"snack",    kcal:387, p:13, c:78, g:4,   sem:"amarillo", tags:[V,VG,ST] },
+  { id:"papas_paq", name:"Papas fritas (paquete)",cat:"snack",   kcal:536, p:6.6,c:53, g:34,  sem:"rojo",     tags:[V,VG,ST], unit:{label:"paquete", g:35} },
+  { id:"gelatina",  name:"Gelatina",             cat:"snack",    kcal:62,  p:1.2,c:14, g:0,   sem:"amarillo", tags:[ST], unit:{label:"pote", g:120} },
+  { id:"mermelada", name:"Mermelada",            cat:"snack",    kcal:250, p:0.4,c:65, g:0.1, sem:"amarillo", tags:[V,VG,ST], unit:{label:"cucharada", g:20} },
+
+  // ---------- MÁS BEBIDAS ----------
+  { id:"agua",      name:"Agua",                 cat:"bebida",   kcal:0,   p:0,  c:0,  g:0,   sem:"verde",    tags:[V,VG,ST], unit:{label:"vaso", g:200} },
+  { id:"jugo_exp",  name:"Jugo de naranja exprimido",cat:"bebida",kcal:45, p:0.7,c:10, g:0.2, sem:"amarillo", tags:[V,VG,ST], unit:{label:"vaso", g:200} },
+  { id:"jugo_polvo",name:"Jugo en polvo (preparado)",cat:"bebida",kcal:25, p:0,  c:6,  g:0,   sem:"amarillo", tags:[V,VG,ST], unit:{label:"vaso", g:200} },
+  { id:"leche_choc",name:"Leche chocolatada",    cat:"bebida",   kcal:83,  p:3,  c:12, g:2.5, sem:"amarillo", tags:[V,ST], unit:{label:"vaso", g:200} },
+  { id:"agua_sabor",name:"Agua saborizada",      cat:"bebida",   kcal:20,  p:0,  c:5,  g:0,   sem:"amarillo", tags:[V,VG,ST], unit:{label:"vaso", g:200} },
+  { id:"cerveza",   name:"Cerveza",              cat:"bebida",   kcal:43,  p:0.5,c:3.6,g:0,   sem:"rojo",     tags:[V,VG], unit:{label:"vaso", g:330} },
+  { id:"vino",      name:"Vino tinto",           cat:"bebida",   kcal:85,  p:0.1,c:2.6,g:0,   sem:"rojo",     tags:[V,VG,ST], unit:{label:"copa", g:150} },
+  { id:"energizante",name:"Bebida energizante",  cat:"bebida",   kcal:45,  p:0,  c:11, g:0,   sem:"rojo",     tags:[V,VG,ST], unit:{label:"lata", g:250} },
 ];
 
 const FOOD_BY_ID = {};

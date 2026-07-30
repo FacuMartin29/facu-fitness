@@ -490,6 +490,12 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .nutri-kcal{ font-size:46px; font-weight:900; color:#fff; line-height:1.05; margin:4px 0 2px; }
 .nutri-kcal span{ font-size:18px; font-weight:800; margin-left:6px; color:rgba(255,255,255,.9); }
 .nutri-goal-sub{ font-size:13px; font-weight:700; color:rgba(255,255,255,.9); }
+.nutri-edit-goal{
+  margin-top:12px; padding:7px 16px; border-radius:999px; cursor:pointer;
+  background:rgba(255,255,255,.18); border:1.5px solid rgba(255,255,255,.35);
+  color:#fff; font-weight:800; font-size:12.5px; transition:transform .12s, background .15s;
+}
+.nutri-edit-goal:active{ transform:scale(.95); background:rgba(255,255,255,.28); }
 .macro-row{ margin-bottom:14px; }
 .macro-row:last-of-type{ margin-bottom:0; }
 .macro-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; }
@@ -625,6 +631,13 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .food-macros-grid > div{ background:var(--gris-100); border-radius:12px; padding:10px 4px; }
 .food-macros-grid b{ display:block; font-size:18px; font-weight:800; color:var(--text); }
 .food-macros-grid span{ font-size:10px; color:var(--gris-500); }
+
+/* --- Nutrición en Métricas --- */
+.nutri-metric-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.nm-stat{ background:var(--gris-100); border-radius:12px; padding:10px 4px; text-align:center; }
+.nm-num{ font-size:19px; font-weight:800; color:var(--text); line-height:1; }
+.nm-num span{ font-size:11px; font-weight:700; color:var(--gris-400); }
+.nm-lbl{ font-size:9.5px; color:var(--gris-500); margin-top:4px; line-height:1.2; }
 
 /* --- Vista PLAN: preferencias --- */
 .nutri-check{ display:flex; align-items:center; gap:10px; font-size:14px; font-weight:700; color:var(--text); cursor:pointer; margin-top:6px; }

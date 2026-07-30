@@ -37,14 +37,20 @@ function computeNutrition(){
   else if (objetivo === "ganar_musculo"){ cal = tdee * 1.10; ajusteTxt = "Superávit del 10%"; }
   else { cal = tdee; ajusteTxt = "Mantenimiento"; }
   cal = Math.round(cal / 10) * 10;
+  const autoCal = cal;
 
-  // Macros
+  // Meta manual: si la persona fijó sus propias calorías, mandan esas
+  const override = +(( (p.nutri||{}).calOverride) || 0);
+  const custom = override > 0;
+  if (custom){ cal = override; ajusteTxt = "Meta personalizada"; }
+
+  // Macros (proteína por peso; grasa 25%; el resto carbos) — se recalculan con la meta final
   const protPerKg = objetivo === "perder_grasa" ? 2.2 : (objetivo === "ganar_musculo" ? 2.0 : 1.8);
   const prot = Math.round(peso * protPerKg);
   const grasa = Math.round(cal * 0.25 / 9);
   const carbs = Math.max(0, Math.round((cal - (prot * 4 + grasa * 9)) / 4));
 
-  return { bmr:Math.round(bmr), tdee:Math.round(tdee), cal, prot, grasa, carbs,
+  return { bmr:Math.round(bmr), tdee:Math.round(tdee), cal, autoCal, custom, prot, grasa, carbs,
            actNom, dias, objetivo, ajusteTxt, protPerKg };
 }
 
@@ -152,6 +158,60 @@ function dayTotals(date){
   dayLog(date).forEach(it => { t.kcal += it.kcal||0; t.p += it.p||0; t.c += it.c||0; t.g += it.g||0; });
   t.p = Math.round(t.p); t.c = Math.round(t.c); t.g = Math.round(t.g);
   return t;
+}
+
+/* =========================================================
+   TARJETA DE NUTRICIÓN PARA MÉTRICAS (últimos 7 días)
+   ========================================================= */
+function buildNutriMetricsCard(){
+  const n = computeNutrition();
+  if (!n) return "";
+  const days = [];
+  for (let i = 6; i >= 0; i--){ const d = new Date(); d.setDate(d.getDate() - i); days.push(fmtDate(d)); }
+  const data = days.map(dt => { const t = dayTotals(dt); return { date:dt, kcal:t.kcal, p:t.p }; });
+  const logged = data.filter(x => x.kcal > 0);
+
+  if (!logged.length){
+    return `
+      <div class="card">
+        <div class="section-title" style="margin-top:0;">🥗 Nutrición</div>
+        <div class="empty-state">Registrá lo que comés en <b>Nutrición → Hoy</b> y acá vas a ver tu adherencia, promedios y los últimos 7 días.</div>
+      </div>`;
+  }
+
+  const goal = n.cal;
+  const avgKcal = Math.round(logged.reduce((s,x)=>s+x.kcal,0) / logged.length);
+  const avgP = Math.round(logged.reduce((s,x)=>s+x.p,0) / logged.length);
+  const enObjetivo = logged.filter(x => Math.abs(x.kcal - goal) <= goal*0.10).length;
+
+  // Mini gráfico de barras: kcal por día vs meta
+  const w = 300, h = 116, padX = 10, padTop = 14, padBot = 20;
+  const maxV = Math.max(goal, ...data.map(x=>x.kcal)) * 1.12 || 1;
+  const bw = (w - padX*2) / 7;
+  const yGoal = padTop + (1 - goal/maxV) * (h - padTop - padBot);
+  const bars = data.map((x,i) => {
+    const bh = x.kcal>0 ? Math.max(2, (x.kcal/maxV) * (h - padTop - padBot)) : 0;
+    const bx = padX + i*bw + bw*0.2, by = h - padBot - bh, bwid = bw*0.6;
+    const near = Math.abs(x.kcal - goal) <= goal*0.10;
+    const col = x.kcal===0 ? "var(--gris-200)" : (near ? "#2f9e44" : (x.kcal>goal ? "#f08c00" : "#e03131"));
+    const dow = DIAS_CORTO[parseDate(x.date).getDay()];
+    return `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bwid.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="${col}"/>
+      <text x="${(bx+bwid/2).toFixed(1)}" y="${h-6}" text-anchor="middle" font-size="9" fill="var(--gris-400)">${dow}</text>`;
+  }).join("");
+  const goalLine = `<line x1="${padX}" y1="${yGoal.toFixed(1)}" x2="${w-padX}" y2="${yGoal.toFixed(1)}" stroke="var(--gris-400)" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="${w-padX}" y="${(yGoal-4).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--gris-500)">meta ${goal}</text>`;
+
+  return `
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">🥗 Nutrición · últimos 7 días</div>
+      <div class="nutri-metric-grid">
+        <div class="nm-stat"><div class="nm-num">${logged.length}<span>/7</span></div><div class="nm-lbl">días registrados</div></div>
+        <div class="nm-stat"><div class="nm-num">${avgKcal}</div><div class="nm-lbl">kcal promedio</div></div>
+        <div class="nm-stat"><div class="nm-num">${avgP}<span>g</span></div><div class="nm-lbl">proteína prom.</div></div>
+        <div class="nm-stat"><div class="nm-num">${enObjetivo}</div><div class="nm-lbl">días en objetivo</div></div>
+      </div>
+      <svg viewBox="0 0 ${w} ${h}" style="width:100%; height:120px; margin-top:6px;">${goalLine}${bars}</svg>
+    </div>`;
 }
 
 /* =========================================================
@@ -596,6 +656,34 @@ function toggleExcluir(foodId){
   closeModal(); renderNutricion();
 }
 
+/* ---------- Meta de calorías editable ---------- */
+function openCalGoal(){
+  const n = computeNutrition(); if (!n) return;
+  $("#modal-body").innerHTML = `
+    <div class="modal-title">🎯 Meta de calorías diaria</div>
+    <div class="modal-desc" style="margin-bottom:12px;">Sugerida automática: <b>${n.autoCal} kcal</b> (${OBJETIVO_LABEL[n.objetivo]}, ${n.ajusteTxt.toLowerCase()}). Podés fijar la tuya.</div>
+    <label class="nf-label">Calorías objetivo</label>
+    <input id="cal-goal" class="nf-search" type="number" inputmode="numeric" value="${n.cal}" style="margin-bottom:4px;">
+    <div class="nf-chips">
+      <button class="nf-chip" onclick="document.getElementById('cal-goal').value=${n.autoCal}">Auto (${n.autoCal})</button>
+      <button class="nf-chip" onclick="calGoalNudge(-100)">−100</button>
+      <button class="nf-chip" onclick="calGoalNudge(100)">+100</button>
+    </div>
+    <button class="btn btn-primary" style="margin-top:14px;" onclick="saveCalGoal()">Guardar meta</button>
+    ${n.custom ? `<button class="btn btn-outline" style="margin-top:8px;" onclick="resetCalGoal()">↩︎ Volver a la meta automática</button>` : ""}
+    <button class="btn btn-ghost" style="margin-top:8px;" onclick="closeModal()">Cancelar</button>
+  `;
+  $("#modal-overlay").classList.add("open");
+}
+function calGoalNudge(d){ const i = $("#cal-goal"); if (i) i.value = Math.max(0, (+i.value||0) + d); }
+function saveCalGoal(){
+  const v = Math.round(+($("#cal-goal").value || 0));
+  if (!v || v < 800 || v > 6000){ toast("Poné un valor realista (800–6000)"); return; }
+  saveNutriPrefs({ calOverride: v });
+  toast("Meta actualizada 🎯"); closeModal(); renderNutricion();
+}
+function resetCalGoal(){ saveNutriPrefs({ calOverride: 0 }); toast("Volviste a la meta automática"); closeModal(); renderNutricion(); }
+
 /* =========================================================
    VISTA "PLAN" — metas + preferencias
    ========================================================= */
@@ -617,6 +705,7 @@ function viewNutriPerfil(n){
       <div class="nutri-goal-label">Tu objetivo diario</div>
       <div class="nutri-kcal">${n.cal}<span>kcal</span></div>
       <div class="nutri-goal-sub">${OBJETIVO_LABEL[n.objetivo]} · ${n.ajusteTxt}</div>
+      <button class="nutri-edit-goal" onclick="openCalGoal()">✏️ Editar meta</button>
     </div>
     <div class="card">
       <div class="section-title" style="margin-top:0;">Reparto de macros</div>
