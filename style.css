@@ -582,6 +582,16 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .nf-preview{ margin-top:12px; padding:12px; border-radius:12px; background:var(--gris-100); font-size:14px; color:var(--gris-600); text-align:center; }
 .nf-preview b{ color:var(--text); font-size:18px; }
 
+/* Escáner de código de barras */
+.nf-scan-btn{ margin-bottom:10px; padding:11px; font-size:14px; }
+.scan-wrap{ position:relative; width:100%; aspect-ratio:4/3; border-radius:16px; overflow:hidden; background:#000; }
+.scan-wrap video{ width:100%; height:100%; object-fit:cover; display:block; }
+.scan-frame{ position:absolute; inset:18% 12%; border:3px solid rgba(255,255,255,.9); border-radius:12px; box-shadow:0 0 0 100vmax rgba(0,0,0,.28); }
+.scan-status{ text-align:center; font-size:13px; color:var(--gris-600); margin:10px 0; font-weight:600; }
+.scan-manual{ display:flex; gap:8px; align-items:center; }
+.scan-manual .nf-search{ flex:1; }
+.scanned-badge{ display:inline-block; font-size:11px; font-weight:800; color:#1a7f37; background:#e7f6ec; padding:4px 10px; border-radius:999px; margin-bottom:8px; }
+
 /* Recetas (detalle) */
 .recipe-art{ display:block; width:100%; height:100%; }
 .recipe-photo{ width:100%; height:150px; border-radius:16px; overflow:hidden; }

@@ -5,7 +5,7 @@
    solo si no hay conexión. Así cada cambio publicado impacta apenas
    entrás, sin tener que reinstalar ni abrir Safari.
    ========================================================= */
-const CACHE_NAME = "facfit-v37";
+const CACHE_NAME = "facfit-v38";
 
 // El shell de la app + logo/íconos. Las fotos de ejercicios (images/exercises/*)
 // NO van acá para no hacer pesada la instalación: se cachean solas la primera
@@ -15,6 +15,7 @@ const CORE_FILES = [
   "index.html",
   "style.css",
   "vendor/supabase.js",
+  "vendor/zxing.js",
   "art.js",
   "auth.js",
   "core.js",

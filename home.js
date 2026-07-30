@@ -283,5 +283,9 @@ function undoNoAsistio(date){
   renderHome();
 }
 
-function closeModal(){ $("#modal-overlay").classList.remove("open"); }
+function closeModal(){
+  // Si había un escáner de cámara abierto, lo apagamos siempre
+  if (typeof stopScanner === "function") stopScanner();
+  $("#modal-overlay").classList.remove("open");
+}
 

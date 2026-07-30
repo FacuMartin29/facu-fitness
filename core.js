@@ -4,7 +4,7 @@
    ========================================================= */
 /* Version de la app (se sube junto con el cache del service worker). Sirve para
    saber con qué versión se envió cada opinión en la encuesta. */
-const APP_VERSION = "v37";
+const APP_VERSION = "v38";
 
 const DIAS_NOMBRE = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 const DIAS_CORTO  = ["D","L","M","X","J","V","S"];

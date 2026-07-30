@@ -327,6 +327,7 @@ function openAddFood(meal){
   addFoodMeal = meal;
   $("#modal-body").innerHTML = `
     <div class="modal-title">Agregar a ${mealLabel(meal)}</div>
+    <button class="btn btn-outline nf-scan-btn" onclick="openBarcodeScanner()">📷 Escanear código de barras</button>
     <input id="nf-search" class="nf-search" placeholder="Buscar alimento o receta…" oninput="nfSearch(this.value)" autocomplete="off">
     <div id="nf-results" class="nf-results">${nfResultsHTML("")}</div>
     <button class="btn btn-ghost" style="margin-top:8px;" onclick="closeModal()">Cerrar</button>
@@ -466,6 +467,111 @@ function removeDiaryItem(uid){
   if (!log[date].length) delete log[date];
   saveNutriLog(log);
   renderNutricion();
+}
+
+/* =========================================================
+   ESCÁNER DE CÓDIGO DE BARRAS (ZXing) + Open Food Facts
+   Funciona en iPhone y Android. Necesita internet para buscar
+   el producto (la base es Open Food Facts, gratis y abierta).
+   ========================================================= */
+let _bcReader = null;
+function openBarcodeScanner(){
+  $("#modal-body").innerHTML = `
+    <div class="modal-title">📷 Escanear producto</div>
+    <div class="scan-wrap"><video id="scan-video" playsinline muted autoplay></video><div class="scan-frame"></div></div>
+    <div id="scan-status" class="scan-status">Apuntá al código de barras del envase…</div>
+    <div class="scan-manual">
+      <input id="scan-code" class="nf-search" inputmode="numeric" placeholder="…o escribí el número del código" style="margin:0;">
+      <button class="btn-lift" onclick="lookupBarcode(document.getElementById('scan-code').value)">Buscar</button>
+    </div>
+    <button class="btn btn-ghost" style="margin-top:10px;" onclick="closeScanner()">Cancelar</button>
+  `;
+  $("#modal-overlay").classList.add("open");
+  startScanner();
+}
+function startScanner(){
+  if (typeof ZXing === "undefined" || !ZXing.BrowserMultiFormatReader){
+    setScanStatus("Tu navegador no soporta el escaneo. Escribí el número del código 👇"); return;
+  }
+  try {
+    _bcReader = new ZXing.BrowserMultiFormatReader();
+    const video = document.getElementById("scan-video");
+    const cb = (result, err) => {
+      if (result){ const code = result.getText ? result.getText() : result.text; lookupBarcode(code); }
+    };
+    const constraints = { video: { facingMode: { ideal: "environment" } } };
+    if (typeof _bcReader.decodeFromConstraints === "function") _bcReader.decodeFromConstraints(constraints, video, cb);
+    else _bcReader.decodeFromVideoDevice(null, video, cb);
+  } catch(e){ setScanStatus("No pude abrir la cámara. Escribí el número del código 👇"); }
+}
+function stopScanner(){ try { if (_bcReader) _bcReader.reset(); } catch(e){} _bcReader = null; }
+function closeScanner(){ stopScanner(); closeModal(); }
+function setScanStatus(t){ const el = $("#scan-status"); if (el) el.textContent = t; }
+
+async function lookupBarcode(code){
+  code = (code||"").trim();
+  if (!/^\d{6,14}$/.test(code)){ setScanStatus("Ese código no parece válido 🤔"); return; }
+  stopScanner();
+  setScanStatus("Buscando el producto…");
+  try {
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,nutriments`);
+    const data = await res.json();
+    if (!data || data.status !== 1 || !data.product){ showBarcodeNotFound(code); return; }
+    const p = data.product, nm = p.nutriments || {};
+    let kcal = nm["energy-kcal_100g"];
+    if (kcal == null && nm["energy_100g"] != null) kcal = nm["energy_100g"] / 4.184; // kJ -> kcal
+    const prod = {
+      code, name: (p.product_name || "Producto").trim(), brand: (p.brands||"").split(",")[0].trim(),
+      kcal: Math.round(kcal || 0),
+      p: Math.round((nm.proteins_100g||0)*10)/10,
+      c: Math.round((nm.carbohydrates_100g||0)*10)/10,
+      g: Math.round((nm.fat_100g||0)*10)/10,
+    };
+    if (!prod.kcal && !prod.p && !prod.c && !prod.g){ showBarcodeNotFound(code, true); return; }
+    showScannedProduct(prod);
+  } catch(e){ setScanStatus("Sin conexión para buscar el producto. Probá de nuevo."); }
+}
+function showBarcodeNotFound(code, sinDatos){
+  $("#modal-body").innerHTML = `
+    <div class="modal-title">${sinDatos?"Producto sin datos":"Producto no encontrado"}</div>
+    <div class="modal-desc" style="margin-bottom:12px;">${sinDatos
+      ? `El código <b>${esc(code)}</b> existe pero no tiene info nutricional cargada en Open Food Facts.`
+      : `El código <b>${esc(code)}</b> no está en la base de Open Food Facts.`} Podés buscarlo por nombre en nuestra base.</div>
+    <button class="btn btn-primary" onclick="openAddFood('${addFoodMeal}')">Buscar por nombre</button>
+    <button class="btn btn-ghost" style="margin-top:8px;" onclick="closeModal()">Cerrar</button>
+  `;
+}
+function showScannedProduct(prod){
+  window._scanned = prod;
+  $("#modal-body").innerHTML = `
+    <div class="scanned-badge">📦 Escaneado de Open Food Facts</div>
+    <div class="modal-title">${esc(prod.name)}</div>
+    <div class="modal-desc" style="margin-bottom:10px;">${prod.brand?esc(prod.brand)+" · ":""}${prod.kcal} kcal/100g · P${prod.p} · C${prod.c} · G${prod.g}</div>
+    <label class="nf-label">Cantidad (gramos)</label>
+    <div class="nf-qty"><input id="nf-grams" type="number" inputmode="numeric" value="100" oninput="scanPreview()"></div>
+    <div class="nf-chips">
+      <button class="nf-chip" onclick="document.getElementById('nf-grams').value=50;scanPreview()">50 g</button>
+      <button class="nf-chip" onclick="document.getElementById('nf-grams').value=100;scanPreview()">100 g</button>
+      <button class="nf-chip" onclick="document.getElementById('nf-grams').value=200;scanPreview()">200 g</button>
+    </div>
+    <div id="nf-prev" class="nf-preview"></div>
+    <button class="btn btn-primary" style="margin-top:12px;" onclick="confirmScanned()">Agregar al diario</button>
+    <button class="btn btn-ghost" style="margin-top:8px;" onclick="openBarcodeScanner()">‹ Escanear otro</button>
+  `;
+  scanPreview();
+}
+function scanPreview(){
+  const prod = window._scanned; const gr = +($("#nf-grams").value||0); const k = gr/100;
+  const el = $("#nf-prev");
+  if (el) el.innerHTML = `<b>${Math.round(prod.kcal*k)}</b> kcal · P ${(prod.p*k).toFixed(1)} · C ${(prod.c*k).toFixed(1)} · G ${(prod.g*k).toFixed(1)}`;
+}
+function confirmScanned(){
+  const prod = window._scanned; const gr = +($("#nf-grams").value||0);
+  if (!gr || gr <= 0){ toast("Poné una cantidad válida"); return; }
+  const k = gr/100;
+  addDiaryItem({ name:prod.name, emoji:"📦", detail:`${gr} g`, meal:addFoodMeal, kind:"scanned",
+    kcal:Math.round(prod.kcal*k), p:+(prod.p*k).toFixed(1), c:+(prod.c*k).toFixed(1), g:+(prod.g*k).toFixed(1) });
+  toast("Agregado al diario ✅"); closeModal(); renderNutricion();
 }
 
 /* =========================================================
