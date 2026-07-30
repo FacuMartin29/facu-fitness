@@ -724,6 +724,28 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .cal-cell{ transition: transform .1s; }
 .cal-cell:active{ transform:scale(.9); }
 
+/* ---- Micro-interacciones: feedback táctil instantáneo en todo lo tocable ---- */
+.btn{ transition: transform .12s ease, background .15s ease, opacity .15s, border-color .15s; }
+.btn:active{ transform: scale(.97); }
+.recipe-card, .menu-meal, .nf-row, .alim-row, .food-macros-grid > div,
+.med-stat, .nm-stat, .stat-card, .logro, .nudge-card, .upday{
+  transition: transform .13s cubic-bezier(.2,.8,.3,1), background .15s, box-shadow .18s;
+}
+.recipe-card:active, .menu-meal:active, .nf-row:active, .alim-row:active{ transform: scale(.98); }
+.nsub, .nf-chip, .nutri-edit-goal, .di-del{ transition: transform .12s, background .15s, color .15s, border-color .15s; }
+.nsub:active, .nf-chip:active, .di-del:active{ transform: scale(.93); }
+/* Los SVG animados corren en la GPU para no tildarse */
+.nutri-ring, .macro-fill, .mm-fill, .splash-loader, .splash-logo-img{ will-change: transform; }
+
+/* ---- Accesibilidad: si el usuario pide menos movimiento, lo respetamos
+   (además evita cualquier mareo o jank en dispositivos lentos) ---- */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration:.001ms !important; animation-iteration-count:1 !important;
+    transition-duration:.001ms !important; scroll-behavior:auto !important;
+  }
+}
+
 /* ===================== BARRA DE NAVEGACIÓN INFERIOR ===================== */
 .bottomnav{
   position:fixed; bottom:0; left:50%; transform:translateX(-50%);
@@ -740,8 +762,9 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
   transition: color .15s, transform .1s;
 }
 .bn-item:active{ transform:scale(.9); }
-.bn-item svg{ width:23px; height:23px; }
+.bn-item svg{ width:23px; height:23px; transition: transform .22s cubic-bezier(.2,1.5,.4,1); }
 .bn-item.active{ color:var(--rojo); }
+.bn-item.active svg{ transform: translateY(-2px) scale(1.14); }
 
 /* Marca de ejercicio reemplazado */
 .swap-mark{ font-size:11px; }
