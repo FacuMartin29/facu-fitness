@@ -127,18 +127,20 @@ html.ff-boot, html.ff-boot body, html.ff-boot #app{ background:#000 !important; 
 }
 @keyframes pop{ from{opacity:0; transform:scale(.9);} to{opacity:1; transform:scale(1.08);} }
 .splash-sub{
-  color: var(--gris-400);
-  font-size: 13px;
-  letter-spacing: .5px;
-  font-weight: 600;
-  font-style: italic;
-  margin-top:4px;
+  font-family: 'Bangers', var(--font-display);
+  color: #fff;
+  font-size: 23px;
+  letter-spacing: 2.5px;
+  font-weight: 400;
+  text-transform: uppercase;
+  margin-top:12px;
   padding: 0 24px;
   text-align:center;
-  max-width: 300px;
+  max-width: 340px;
+  line-height: 1.15;
   transition: opacity .35s ease;
+  text-shadow: 0 0 20px rgba(224,49,49,.5);
 }
-.splash-sub::before{ content:"“"; } .splash-sub::after{ content:"”"; }
 
 /* Loader: anillo con degradé rojo y glow, girando suave */
 .splash-loader{
