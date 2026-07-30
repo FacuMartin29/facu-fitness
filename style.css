@@ -120,12 +120,13 @@ html.ff-boot, html.ff-boot body, html.ff-boot #app{ background:#000 !important; 
   width: 100%; height:auto; display:block;
   transform: scale(1.08);   /* leve zoom para comer los bordes de los costados */
   transform-origin: center center;
-  /* Sin 'forwards': al terminar el pop vuelve al transform declarado (scale 1.08),
-     así la regla .zoom del final puede agrandar el logo (scale 1.75) */
-  animation: pop .7s cubic-bezier(.2,1.4,.4,1);
+  /* Entrada suave (ease-out sin rebote) para que el logo NO vibre. Sin 'forwards':
+     al terminar vuelve al transform declarado (scale 1.08), así la regla .zoom
+     del final puede agrandar el logo (scale 1.75). */
+  animation: pop .6s cubic-bezier(.25,.6,.3,1);
   transition: transform .6s cubic-bezier(.3,0,.15,1), opacity .55s ease;
 }
-@keyframes pop{ from{opacity:0; transform:scale(.9);} to{opacity:1; transform:scale(1.08);} }
+@keyframes pop{ from{opacity:0; transform:scale(1.04);} to{opacity:1; transform:scale(1.08);} }
 .splash-sub{
   font-family: 'Bangers', var(--font-display);
   color: #fff;
@@ -747,8 +748,9 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .recipe-card:active, .menu-meal:active, .nf-row:active, .alim-row:active{ transform: scale(.98); }
 .nsub, .nf-chip, .nutri-edit-goal, .di-del{ transition: transform .12s, background .15s, color .15s, border-color .15s; }
 .nsub:active, .nf-chip:active, .di-del:active{ transform: scale(.93); }
-/* Los SVG animados corren en la GPU para no tildarse */
-.nutri-ring, .macro-fill, .mm-fill, .splash-loader, .splash-logo-img{ will-change: transform; }
+/* Los SVG animados corren en la GPU para no tildarse. OJO: el logo del splash
+   NO lleva will-change: con la máscara del contenedor causaba un temblor en iOS. */
+.nutri-ring, .macro-fill, .mm-fill, .splash-loader{ will-change: transform; }
 
 /* ---- Accesibilidad: si el usuario pide menos movimiento, lo respetamos
    (además evita cualquier mareo o jank en dispositivos lentos) ---- */
