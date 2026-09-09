@@ -60,7 +60,20 @@
       <div class="field"><label>Correo</label><input id="auth-login-email" type="email" autocapitalize="off" autocomplete="email" placeholder="tucorreo@ejemplo.com"></div>
       <div class="field"><label>Contraseña</label><input id="auth-login-pass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
       <button class="btn btn-primary" id="btn-login" onclick="authLogin()">Ingresar</button>
+      <button class="btn btn-link" onclick="goForgot()">¿Olvidaste tu contraseña?</button>
       <button class="btn btn-ghost" style="margin-top:6px;" onclick="authBack()">‹ Volver</button>
+    </div>
+  </div>
+
+  <!-- ===================== AUTH: RECUPERAR CONTRASEÑA (email) ===================== -->
+  <div class="screen" id="screen-forgot">
+    <div class="onb-wrap">
+      <div class="auth-brand">FAC <span>FIT</span></div>
+      <div class="onb-title">Recuperar contraseña</div>
+      <div class="onb-desc">Poné tu correo y te enviamos un código para poner una contraseña nueva.</div>
+      <div class="field"><label>Correo electrónico</label><input id="auth-forgot-email" type="email" autocapitalize="off" autocomplete="email" placeholder="tucorreo@ejemplo.com"></div>
+      <button class="btn btn-primary" id="btn-forgot-code" onclick="authForgotSendCode()">Enviar código</button>
+      <button class="btn btn-ghost" style="margin-top:6px;" onclick="goLogin()">‹ Volver</button>
     </div>
   </div>
 
@@ -85,7 +98,7 @@
       <div class="field"><label>Código de 6 dígitos</label><input id="auth-otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="––––––" style="letter-spacing:10px; font-size:26px; text-align:center; font-weight:800;"></div>
       <button class="btn btn-primary" id="btn-verify" onclick="authVerifyCode()">Verificar</button>
       <button class="btn btn-ghost" style="margin-top:6px;" onclick="authResend()">Reenviar código</button>
-      <button class="btn btn-ghost" onclick="goRegister()">‹ Cambiar correo</button>
+      <button class="btn btn-ghost" onclick="authChangeEmail()">‹ Cambiar correo</button>
     </div>
   </div>
 

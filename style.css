@@ -209,6 +209,7 @@ input[type="date"], input[type="email"]{ -webkit-appearance:none; appearance:non
 .btn-outline{ background:transparent; border:1.5px solid var(--gris-200); color:var(--text); }
 .btn-red{ background: var(--rojo); color:var(--blanco); }
 .btn-ghost{ background:transparent; color:var(--gris-600); font-weight:700; }
+.btn-link{ background:transparent; color:var(--rojo); font-weight:700; font-size:13.5px; padding:8px; margin-top:2px; }
 .btn-sm{ padding:10px 16px; font-size:13px; width:auto; display:inline-block; }
 
 /* ===================== TOPBAR / MAIN ===================== */

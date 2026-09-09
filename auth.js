@@ -69,7 +69,10 @@ async function ensureProfileEmail(){
 /* ---------------- NAVEGACIÓN ENTRE PANTALLAS DE AUTH ---------------- */
 function goRegister(){ showScreen("#screen-register"); }
 function goLogin(){ showScreen("#screen-login"); }
+function goForgot(){ showScreen("#screen-forgot"); }
 function authBack(){ showScreen("#screen-auth"); }
+/* Desde la pantalla de código, "cambiar correo" vuelve al paso correcto */
+function authChangeEmail(){ showScreen(authState.mode === "recover" ? "#screen-forgot" : "#screen-register"); }
 
 /* ---------------- REGISTRO: 1) enviar código ---------------- */
 async function authSendCode(){
@@ -77,6 +80,7 @@ async function authSendCode(){
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ authToast("Poné un correo válido 📧"); return; }
   if (!sb){ authToast("Sin conexión con el servidor"); return; }
   authState.email = email;
+  authState.mode = "register";
   setBtnLoading("#btn-send-code", true);
   const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
   setBtnLoading("#btn-send-code", false);
@@ -95,7 +99,29 @@ async function authResend(){
   authToast(error ? "Esperá unos segundos para reenviar" : "Código reenviado 📩");
 }
 
-/* ---------------- REGISTRO: 2) verificar código ---------------- */
+/* ---------------- RECUPERAR CONTRASEÑA: 1) enviar código ---------------- */
+async function authForgotSendCode(){
+  const email = ($("#auth-forgot-email").value || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ authToast("Poné un correo válido 📧"); return; }
+  if (!sb){ authToast("Sin conexión con el servidor"); return; }
+  authState.email = email;
+  authState.mode = "recover";
+  setBtnLoading("#btn-forgot-code", true);
+  // shouldCreateUser:false -> solo manda código si la cuenta existe
+  const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+  setBtnLoading("#btn-forgot-code", false);
+  if (error){
+    if (/rate|limit|seconds/i.test(error.message)) authToast("Esperá unos segundos antes de pedir otro código");
+    else if (/signup|not.*found|no.*user|disabled/i.test(error.message)) authToast("No encontramos una cuenta con ese correo");
+    else authToast("No pude enviar el código 😕");
+    return;
+  }
+  $("#otp-email-label").textContent = email;
+  $("#auth-otp").value = "";
+  showScreen("#screen-otp");
+}
+
+/* ---------------- 2) verificar código (registro o recuperación) ---------------- */
 async function authVerifyCode(){
   const token = ($("#auth-otp").value || "").replace(/\D/g,"").trim();
   if (token.length < 6){ authToast("Ingresá el código completo tal cual llegó al mail"); return; }
@@ -104,10 +130,14 @@ async function authVerifyCode(){
   const { error } = await sb.auth.verifyOtp({ email: authState.email, token, type: "email" });
   setBtnLoading("#btn-verify", false);
   if (error){ authToast("Código incorrecto o vencido"); return; }
+  // Ajustamos los textos de la pantalla de contraseña según el flujo
+  const recover = authState.mode === "recover";
+  const t = $("#screen-setpass .onb-title"); if (t) t.textContent = recover ? "Nueva contraseña" : "Creá tu contraseña";
+  const d = $("#screen-setpass .onb-desc"); if (d) d.textContent = recover ? "Elegí una contraseña nueva para tu cuenta." : "La vas a usar para iniciar sesión la próxima vez.";
   showScreen("#screen-setpass");
 }
 
-/* ---------------- REGISTRO: 3) crear contraseña ---------------- */
+/* ---------------- 3) guardar contraseña (registro o recuperación) ---------------- */
 async function authSetPassword(){
   const p1 = $("#auth-newpass").value, p2 = $("#auth-newpass2").value;
   if (p1.length < 6){ authToast("La contraseña necesita al menos 6 caracteres"); return; }
@@ -117,7 +147,16 @@ async function authSetPassword(){
   const { error } = await sb.auth.updateUser({ password: p1 });
   setBtnLoading("#btn-setpass", false);
   if (error){ authToast("No pude guardar la contraseña"); return; }
-  // cuenta nueva: arrancamos con datos limpios y guardamos el email
+
+  if (authState.mode === "recover"){
+    // Cuenta existente: NO borramos nada ni re-onboarding; traemos sus datos y adentro
+    authToast("¡Contraseña actualizada! 🔒");
+    $("#auth-newpass").value = ""; $("#auth-newpass2").value = "";
+    await pullUserData();
+    afterAuth();
+    return;
+  }
+  // Registro (cuenta nueva): arrancamos con datos limpios y guardamos el email
   SYNC_KEYS.forEach(k => localStorage.removeItem(k));
   State.saveProfile({ email: authState.email });
   resetOnb();
