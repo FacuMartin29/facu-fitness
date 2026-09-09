@@ -1,0 +1,34 @@
+name: Keep Supabase Awake
+
+# Los proyectos gratis de Supabase se PAUSAN tras 7 dias sin actividad.
+# Este job hace una consulta chica todos los dias para que el proyecto no se
+# duerma. Si algun dia Supabase no responde (por ej. porque quedo pausado),
+# el job falla y GitHub te manda un mail avisando.
+#
+# Si alguna vez recreas el proyecto Supabase, actualiza SB_URL / SB_KEY aca
+# y tambien en auth.js. La clave "publishable" ya es publica (esta en auth.js),
+# por eso va inline sin problema.
+
+on:
+  schedule:
+    - cron: "0 12 * * *"   # todos los dias 12:00 UTC (~09:00 Argentina)
+  workflow_dispatch: {}      # tambien se puede correr a mano desde la pestaña Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST
+        env:
+          SB_URL: "https://apmpwscoogznvlxekkoh.supabase.co"
+          SB_KEY: "sb_publishable_LcQ1GOIvJL8lBc7JKkNPHQ_RD1uBE5V"
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            "$SB_URL/rest/v1/profiles?select=id&limit=1" \
+            -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY")
+          echo "Supabase respondio HTTP $code"
+          if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then
+            echo "Supabase no respondio OK — puede estar pausado. Restauralo en el dashboard."
+            exit 1
+          fi
+          echo "OK: proyecto despierto."
